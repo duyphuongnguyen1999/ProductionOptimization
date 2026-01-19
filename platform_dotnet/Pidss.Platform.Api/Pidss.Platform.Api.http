@@ -1,0 +1,6 @@
+@Pidss.Platform.Api_HostAddress = http://localhost:5177
+
+GET {{Pidss.Platform.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
