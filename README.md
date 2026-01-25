@@ -1,65 +1,86 @@
 # Production Intelligence & Decision Support System (PIDSS)
 
+<p align="right">
+  🇺🇸 <a href="README.md">English</a>
+  | 🇻🇳 <a href="README_VI.md">Tiếng Việt</a>
+</p>
+
 ## 1. Overview
 
 **Production Intelligence & Decision Support System (PIDSS)** is a digital platform designed to support **manufacturing capacity growth under real-world constraints** through data-driven analysis, simulation, and decision support.
 
 The system helps manufacturing teams **identify performance bottlenecks, evaluate optimization strategies (including automation and stage integration), and make informed decisions** to increase production capacity **without increasing labor or factory footprint**.
 
-PIDSS sits **above MES/ERP systems** and focuses on **evaluation, comparison, and recommendation**, not execution.
+PIDSS sits **above existing MES/ERP systems** and focuses on **evaluation, comparison, and recommendation**, not execution.
 
 > **PIDSS is not an MES, not a scheduling system, and not a real-time control system.**  
-> It is a **decision support and intelligence layer** for planners, managers, and digital/process engineers.
+> It is a **decision support and production intelligence layer** for planners, managers, and digital/process engineers.
 
 ---
 
-## 2. Business Problem
+## 2. Business Context
 
-Manufacturing organizations often face long-term capacity growth targets under strict constraints:
+Manufacturing organizations increasingly face strategic growth targets such as:
 
-- Limited factory space
-- Difficulty in hiring additional labor
-- Increasing demand and cost pressure
-
-A typical strategic goal is:
-
-> **Increase overall production capacity by 50% within 5 years,  
+> **Increase overall production capacity by 40–60% within 3–5 years,  
 > without increasing headcount or factory area.**
 
-Achieving this goal requires more than incremental improvements. Organizations must evaluate **multiple optimization strategies**, such as:
+At the same time, they operate under strict constraints:
 
-- Process optimization and cycle time balancing
-- Reduction of downtime and quality losses
-- **Automation and integration of multiple production stages**
-- Reduction of material handling, waiting time, and footprint
+- Limited factory space
+- Difficulty in hiring and retaining labor
+- Rising operational costs
+- High-risk, high-value automation investments ($200K–$1M)
 
-These decisions are high-impact, capital-intensive, and difficult to reverse — making **decision support and quantitative evaluation essential**.
+In practice, decisions related to optimization and automation are often based on:
+- Fragmented spreadsheets
+- Local experience and intuition
+- Inconsistent assumptions
+- Limited ability to compare alternatives objectively
 
-PIDSS is designed to address this exact class of problems.
+This leads to **high investment risk and low decision confidence**.
 
 ---
 
-## 3. What PIDSS Does
+## 3. Core Business Problem
+
+PIDSS addresses the following fundamental question:
+
+> **How can manufacturers evaluate and compare production optimization and automation options  
+> before committing capital, under real operational constraints?**
+
+Key business questions include:
+
+- Where are the true bottlenecks (line / stage / flow)?
+- Which loss drivers dominate (labor, downtime, quality, imbalance)?
+- How will KPIs change under different improvement strategies?
+- Is a $500K automation investment justified?
+- What is the expected ROI and payback period?
+- Which option delivers the best trade-off between cost, capacity, and risk?
+
+---
+
+## 4. What PIDSS Does
 
 PIDSS enables manufacturing teams to:
 
-- Collect and normalize production performance data from multiple sources
+- Collect and normalize observed or simulated production data
 - Quantify and rank performance of stages and production lines
 - Identify bottlenecks and dominant loss drivers
 - Simulate **what-if optimization scenarios** at an aggregate, decision-support level
-- Evaluate and compare strategies such as:
-  - Manual optimization
+- Evaluate strategies such as:
+  - Manual process optimization
   - Semi-automation
   - Full automation and stage integration
-- Compare baseline vs improved scenarios (A/B comparison)
-- Generate actionable recommendations with expected impact and rationale
-- Maintain an **auditable, reproducible history** of decisions and outcomes
+- Perform **A/B comparisons** between baseline and candidate scenarios
+- Generate explainable recommendations with quantified impact
+- Maintain a **run-based, auditable, and reproducible history** of decisions
 
 ---
 
-## 4. What PIDSS Explicitly Does NOT Do
+## 5. What PIDSS Explicitly Does NOT Do
 
-To maintain a clear boundary and avoid scope creep, PIDSS does **not**:
+To maintain a clear system boundary and avoid scope creep, PIDSS does **not**:
 
 - Dispatch work orders or assign tasks to operators
 - Track WIP movement or detailed product routing
@@ -71,23 +92,18 @@ To maintain a clear boundary and avoid scope creep, PIDSS does **not**:
 
 ---
 
-## 5. Target Users
+## 6. Target Users
 
-### Primary Users
-
-#### Production / Plant Managers
-
+### Production / Plant Managers
 - Monitor performance and KPIs
-- Prioritize improvement and automation initiatives
-- Evaluate cost, capacity, and risk trade-offs
+- Prioritize optimization and automation initiatives
+- Evaluate cost, capacity, and investment trade-offs
 
-#### Production Planners
+### Production Planners
+- Assess capacity versus demand
+- Compare production strategies and configuration changes
 
-- Assess capacity vs demand
-- Evaluate production strategies and configuration changes
-
-#### Process / Digital Engineers
-
+### Process / Digital Engineers
 - Analyze cycle time, downtime, and defect data
 - Design and validate optimization and automation scenarios
 - Support OE, Lean, and Kaizen initiatives
@@ -95,88 +111,47 @@ To maintain a clear boundary and avoid scope creep, PIDSS does **not**:
 ### Non-Target Users
 
 - Operators
-- Automation execution systems
-- Real-time control systems
+- Real-time execution systems
+- PLC and automation controllers
 
 ---
 
-## 6. Core Use Cases
-
-### 1. Performance Scoring & Bottleneck Identification
-
-- Rank stages and production lines by efficiency
-- Identify dominant loss drivers (labor, downtime, quality, imbalance)
-
-### 2. Cycle Time & Flow Imbalance Analysis
-
-- Analyze cycle time distribution and variance
-- Detect imbalance and flow inefficiencies across stages or stations
-
-### 3. What-if Optimization & Automation Simulation
-
-- Evaluate impact of:
-  - Cycle time balancing
-  - Downtime or defect reduction
-  - Automation and stage integration
-- Estimate throughput, labor productivity, footprint reduction, and cost impact
-
-### 4. Recommendation Generation
-
-- Propose optimization or automation strategies
-- Provide expected gains, constraints, and rationale
-- Support capital investment and roadmap decisions
-
-### 5. A/B Comparison & OE Validation
-
-- Compare baseline vs improved scenarios
-- Quantify labor savings, capacity gains, and cost improvements
-- Maintain audit trail for OE and automation initiatives
-
----
-
-## 7. Design Philosophy
+## 7. Modeling & Design Philosophy
 
 - **Decision-Centric**: Focus on strategic and tactical decisions, not execution
-- **Aggregate Modeling**: Sufficient fidelity for evaluating strategies without MES-level complexity
-- **Automation-Aware**: Automation is evaluated as a strategic option, not implemented by the system
+- **Aggregate Modeling**: Sufficient fidelity for evaluation without MES-level complexity
+- **Automation-Aware**: Automation is evaluated as a strategic option, not implemented
 - **Explainable**: Clear metrics and rationale behind recommendations
 - **Human-in-the-Loop**: Final decisions remain with people
 - **Run-Based & Auditable**: Every analysis is reproducible and traceable
 
 ---
 
-## 8. Technical Scope (High-Level)
+## 8. Business Value
 
-| Area | Technology |
-| --- | --- |
-| Backend Platform | ASP.NET Core (C#) |
-| Simulation Engine | C++ (aggregate digital twin) |
-| Analytics & Optimization | Python |
-| Database | SQL Server or PostgreSQL |
-| UI | WinForms or Blazor (MVP) |
-| Data Contracts | JSON + JSON Schema |
-| Architecture | Run-based, append-only, versioned |
+> **PIDSS helps manufacturers evaluate $500K automation investments *before spending***  
+> by quantifying expected ROI and payback periods, rather than relying on rough estimates.
+
+Key value delivered:
+- Reduced investment risk
+- Data-driven CAPEX decision support
+- Consistent comparison of optimization and automation strategies
+- Auditable justification for strategic decisions
+- Institutionalization of OE and automation knowledge
 
 ---
 
-## 9. Why This Project Exists
+## 9. Technical Scope (High-Level)
 
-Traditional MES systems answer:
-
-> **“What happened?” / “What is happening now?”**
-
-PIDSS answers:
-
-> **“Which optimization or automation strategy should we choose,  
-> and how much value will it deliver under our constraints?”**
-
-The platform enables:
-
-- Scenario-based **what-if evaluation**
-- KPI-driven bottleneck discovery
-- Strategy comparison (manual vs automation)
-- Decision-ready recommendations
-- Run-based audit and reproducibility
+| Area | Technology |
+| --- | --- |
+| Backend Platform | ASP.NET Core (.NET 8) |
+| Simulation Engine | C++ (aggregate digital twin) |
+| Analytics & Optimization | Python |
+| Database | SQL Server or PostgreSQL |
+| UI Client | WinForms (.NET) |
+| Data Contracts | JSON + JSON Schema |
+| Architecture | Run-based, append-only, versioned |
 
 ---
 
@@ -188,7 +163,7 @@ A **Scenario** describes a hypothetical production strategy, including:
 
 - Line and stage configuration
 - Staffing policies
-- Automation or integration assumptions
+- Automation and integration assumptions
 - Capacity, footprint, and cost parameters
 - Random seed (reproducibility)
 - `schema_version` (compatibility)
@@ -200,7 +175,7 @@ A **Run** is one execution of a scenario:
 - Uniquely identified by `run_id` (UUID)
 - **Append-only** (results are never overwritten)
 - Produces artifacts (datasets, logs, reports)
-- Stores metrics and recommendations
+- Stores KPIs and recommendations
 
 ---
 
@@ -213,7 +188,7 @@ Machines / PLC / MES Export (Observed Data)
 Data Ingestion & Normalization
             │
             ▼
-Platform Backend (ASP.NET Core)
+Platform Backend (.NET)
   - Scenario & Run Management
   - Audit & Versioning
   - Job Orchestration
@@ -225,27 +200,24 @@ Platform Backend (ASP.NET Core)
 KPIs & Recommendations (Database)
             │
             ▼
-GUI (Winform or Blazor)
+GUI Client (WinForms)
 ```
 
 ---
 
 ## 12. Repository Structure
-
-```graphql
+```text
 Production-Optimization/
-├─ core_spec/            # JSON contracts & schemas (single source of truth)
-├─ ui_client/            
-|   ├─ Forms/      
-|   ├─ Services/         
-|   ├─ Models/         
-|   ├─ Services/         
-|   ├─ Program.cs         
-|   ├─ Pidss.UiClient.csproj         
-├─ simulator_cpp/        # C++ simulation engine (CLI)
-├─ ai_py/                # Python analytics & optimizer
-├─ artifacts/            # artifacts/{run_id}/... (append-only)
-└─ docs/
+├─ core_spec/                 # JSON contracts & schemas (single source of truth)
+├─ platform_dotnet/           # ASP.NET Core backend (API, orchestration)
+│   └─ Pidss.Platform.Api/
+├─ ui_client/                 # WinForms client application
+│   └─ Pidss.UiClient/
+├─ simulator_cpp/             # C++ simulation engine (CLI)
+│   └─ Pidss.Simulator.Cli/
+├─ ai_py/                     # Python analytics & optimizer
+├─ artifacts/                 # artifacts/{run_id}/... (append-only)
+└─ docs/                      # Architecture & design documentation
 ```
 
 ---
@@ -257,8 +229,8 @@ Production-Optimization/
 - Phase 2: Database (runs, jobs, metrics, recommendations)
 - Phase 3: Platform backend orchestration
 - Phase 4: C++ simulation v1 (aggregate digital twin)
-- Phase 5: Python KPI analytics v1
-- Phase 6: Blazor dashboard MVP
+- Phase 5: Python KPI & ROI analytics v1
+- Phase 6: WinForms dashboard MVP
 - Phase 7: Optimization & automation strategy evaluation
 - Phase 8: Integration-ready (mock MES import)
 
@@ -267,3 +239,4 @@ Production-Optimization/
 ## 14. License
 
 MIT License
+
