@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36408.4
+# Visual Studio Version 18
+VisualStudioVersion = 18.3.11512.155
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Pidss.Simulator.Cli", "simulator_cpp\Pidss.Simulator.Cli\Pidss.Simulator.Cli.vcxproj", "{D53424AD-5B1E-46E2-9F4A-1407A152C0DB}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pidss.Platform.Api", "platform_dotnet\Pidss.Platform.Api\Pidss.Platform.Api.csproj", "{13DCB91A-1003-4583-9411-C8EC008ABA70}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pidss.UiClient", "ui_client\Pidss.UiClient\Pidss.UiClient.csproj", "{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Pidss.Destop.Winforms", "presentation\Pidss.Destop.Winforms\Pidss.Destop.Winforms.csproj", "{1E73B80B-4104-4E59-887A-2F708078D664}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -43,18 +43,18 @@ Global
 		{13DCB91A-1003-4583-9411-C8EC008ABA70}.Release|x64.Build.0 = Release|Any CPU
 		{13DCB91A-1003-4583-9411-C8EC008ABA70}.Release|x86.ActiveCfg = Release|Any CPU
 		{13DCB91A-1003-4583-9411-C8EC008ABA70}.Release|x86.Build.0 = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|x64.Build.0 = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Debug|x86.Build.0 = Debug|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|Any CPU.Build.0 = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|x64.ActiveCfg = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|x64.Build.0 = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|x86.ActiveCfg = Release|Any CPU
-		{88EB5E72-CFBA-4AF0-BE58-4E6A52CC4473}.Release|x86.Build.0 = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|x64.Build.0 = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Debug|x86.Build.0 = Debug|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|x64.ActiveCfg = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|x64.Build.0 = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|x86.ActiveCfg = Release|Any CPU
+		{1E73B80B-4104-4E59-887A-2F708078D664}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
