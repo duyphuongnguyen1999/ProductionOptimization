@@ -204,33 +204,45 @@ GUI Client (WinForms)
 ---
 
 ## 12. Cấu trúc repository
+
 ```text
-Production-Optimization/
-├─ core_spec/                 # JSON contracts & schemas (single source of truth)
-├─ platform_dotnet/           # ASP.NET Core backend (API, orchestration)
-│   └─ Pidss.Platform.Api/
-├─ ui_client/                 # WinForms client application
-│   └─ Pidss.UiClient/
-├─ simulator_cpp/             # C++ simulation engine (CLI)
-│   └─ Pidss.Simulator.Cli/
-├─ ai_py/                     # Python analytics & optimizer
-├─ artifacts/                 # artifacts/{run_id}/... (append-only)
-└─ docs/                      # Architecture & design documentation
+ProductionOptimization/
+├─ data/
+│ ├─ contracts/
+│ ├─ schemas/
+│ ├─ valdation/
+│ ├─ transforms/
+│ ├─ lineage/
+│ └─ documentation/
+├─ platform_dotnet/
+│ └─ Pidss.Platform.Api/
+├─ simulator_cpp/
+│ └─ Pidss.Simulator.Cli/
+├─ analytics/
+│ └─ Pidss.Analytics.Cli/
+├─ presentation/
+│ └─ Pidss.Destop.Winforms/
+├─ artifacts/
+└─ docs/
 ```
 
 ---
 
 ## Lộ trình triển khai
 
-- Phase 0: Foundation & conventions
-- Phase 1: CoreSpec (contracts & schemas)
-- Phase 2: Database (runs, jobs, metrics, recommendations)
-- Phase 3: Platform backend orchestration
-- Phase 4: C++ simulation v1 (aggregate digital twin)
-- Phase 5: Python KPI & ROI analytics v1
-- Phase 6: WinForms dashboard MVP
-- Phase 7: Đánh giá chiến lược tối ưu & automation
-- Phase 8: Integration-ready (mock MES import)
+
+- Phase 0 — Repository Foundation & Data-Layer Conventions
+- Phase 1 — Domain & Canonical Model
+- Phase 2 — Public Contracts & Schemas
+- Phase 3 — Database & Run Metadata
+- Phase 4 — Platform & Adapter
+- Phase 5 — C++ Simulation v1 (Aggregate Model)
+- Phase 6 — Python Analytics v1
+- Phase 7 — UI MVP
+- Phase 8 — Optimization Batch
+- Phase 9 — ML-based Decision Intelligence
+- Phase 10 — Observed Import (Optional / Future Extension)
+
 
 ## License
 
