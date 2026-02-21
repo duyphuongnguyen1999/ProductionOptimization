@@ -1,4 +1,4 @@
-namespace Pidss.Destop.Winforms;
+namespace Pidss.Desktop.Winforms;
 
 public partial class Form1 : Form
 {
