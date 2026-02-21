@@ -1,4 +1,5 @@
-# Build outputs
+# ================= Build Outputs ================
+
 **/bin/
 **/obj/
 **/Debug/
@@ -8,17 +9,46 @@
 *.so
 *.dylib
 *.pdb
+*.ilk
+*.lib
+*.exp
+*.ncb
+*.aps
+*.idb
+*.ipdb
+*.iobj
+*.tlog
 
-# IDE
+# CMake (in case added later)
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# ================= Visual Studio ===============
+
 .vs/
 .vscode/
 *.suo
 *.user
 *.userosscache
 *.sln.docstates
+*.cache
+*.VC.db
+*.VC.opendb
+*.opendb
+*.dbmdl
+*.psess
+*.vsp
+*.vspx
+*.pidb
+*.svclog
+*.VC.VC.opendb
+
 .idea/
 
-# Python
+# ================= Python ======================
+
 __pycache__/
 *.py[cod]
 *$py.class
@@ -27,27 +57,65 @@ __pycache__/
 env/
 venv/
 ENV/
+.venv/
 *.egg-info/
 dist/
 build/
+.eggs/
+pip-wheel-metadata/
 
-# Artifacts (runtime outputs - tracked structure only)
+# pytest / coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ================= Artifacts ===================
 artifacts/*
 !artifacts/.gitkeep
 
-# OS
+# ================= Logs ========================
+*.log
+logs/
+artifacts/**/logs/*
+
+# ================= Database ====================
+*.db
+*.sqlite
+*.sqlite3
+
+# ================= OS Files ====================
 .DS_Store
 Thumbs.db
+desktop.ini
 *.swp
 *.swo
 
-# Logs
-*.log
+# ================= Temp Files ==================
 
-# Database
-*.db
-*.sqlite
-
-# Temp
 *.tmp
 *.temp
+*.bak
+*.cache
+
+# ================= ML / Models (Future) ========
+*.pkl
+*.joblib
+*.h5
+*.onnx
+*.pt
+*.ckpt
+
+# ================= Misc ========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+
+# Environment files
+.env
+.env.*
