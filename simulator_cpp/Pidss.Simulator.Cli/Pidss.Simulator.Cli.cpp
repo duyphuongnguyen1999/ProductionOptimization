@@ -2,10 +2,14 @@
 //
 
 #include <iostream>
+#include <json.hpp>
+#include <iomanip>
+
+using json = nlohmann::json;
 
 int main()
 {
-    std::cout << "Hello World!\n";
+	std::cout << "Hello World!\n";
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu
