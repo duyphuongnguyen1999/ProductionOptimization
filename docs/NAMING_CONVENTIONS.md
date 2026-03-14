@@ -1,10 +1,5 @@
 # PIDSS Naming Conventions
 
-<p align="right">
-  🇺🇸 <a href="NAMING_CONVENTIONS.md">English</a>
-  | 🇻🇳 <a href="NAMING_CONVENTIONS_VI.md">Tiếng Việt</a>
-</p>
-
 ## 1. General Principles
 
 - Names must be descriptive, unambiguous, and consistent across all layers.
