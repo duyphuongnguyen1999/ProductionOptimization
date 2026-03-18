@@ -1,9 +1,9 @@
 // Pidss.Simulator.Cli.cpp : This file contains the 'main' function. Program execution begins and ends there.
 //
 
+#include <iomanip>
 #include <iostream>
 #include <json.hpp>
-#include <iomanip>
 
 using json = nlohmann::json;
 
