@@ -3,13 +3,14 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>9af07e94-ed64-4f0a-94f0-338915a19c2c</ProjectGuid>
-    <ProjectHome>.</ProjectHome>
-    <StartupFile>Pidss.Synthetic.Mes.Generator.py</StartupFile>
+    <ProjectHome>
+    </ProjectHome>
+    <StartupFile>Pidss.DataPlatform.Synthetic.Mes.Generator.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>Pidss.Synthetic.Mes.Generator</Name>
+    <Name>Pidss.DataPlatform.Synthetic.Mes.Generator</Name>
     <RootNamespace>Pidss.Synthetic.Mes.Generator</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -21,7 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Pidss.Synthetic.Mes.Generator.py" />
+    <Compile Include="Pidss.DataPlatform.Synthetic.Mes.Generator.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
