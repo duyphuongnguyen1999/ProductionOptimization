@@ -13,7 +13,7 @@ The system helps manufacturing teams **identify performance bottlenecks, evaluat
 
 PIDSS sits **above existing MES/ERP systems** and focuses on **evaluation, comparison, and recommendation**, not execution.
 
-> **PIDSS is not an MES, not a scheduling system, and not a real-time control system.**  
+> **PIDSS is not an MES, not a scheduling system, and not a real-time control system.**
 > It is a **decision support and production intelligence layer** for planners, managers, and digital/process engineers.
 
 ---
@@ -22,7 +22,7 @@ PIDSS sits **above existing MES/ERP systems** and focuses on **evaluation, compa
 
 Manufacturing organizations increasingly face strategic growth targets such as:
 
-> **Increase overall production capacity by 40–60% within 3–5 years,  
+> **Increase overall production capacity by 40–60% within 3–5 years,
 > without increasing headcount or factory area.**
 
 At the same time, they operate under strict constraints:
@@ -46,7 +46,7 @@ This leads to **high investment risk and low decision confidence**.
 
 PIDSS addresses the following fundamental question:
 
-> **How can manufacturers evaluate and compare production optimization and automation options  
+> **How can manufacturers evaluate and compare production optimization and automation options
 > before committing capital, under real operational constraints?**
 
 Key business questions include:
@@ -129,7 +129,7 @@ To maintain a clear system boundary and avoid scope creep, PIDSS does **not**:
 
 ## 8. Business Value
 
-> **PIDSS helps manufacturers evaluate $500K automation investments *before spending***  
+> **PIDSS helps manufacturers evaluate $500K automation investments *before spending***
 > by quantifying expected ROI and payback periods, rather than relying on rough estimates.
 
 Key value delivered:
@@ -145,11 +145,12 @@ Key value delivered:
 
 | Area | Technology |
 | --- | --- |
-| Backend Platform | ASP.NET Core (.NET 8) |
+| Backend Platform | ASP.NET Core (.NET) |
 | Simulation Engine | C++ (aggregate digital twin) |
 | Analytics & Optimization | Python |
 | Database | SQL Server or PostgreSQL |
-| UI Client | WinForms (.NET) |
+| UI Client (Web) | React (TypeScript + Vite) |
+| UI Client (Desktop) | WinForms (.NET) — future |
 | Data Contracts | JSON + JSON Schema |
 | Architecture | Run-based, append-only, versioned |
 
@@ -172,7 +173,7 @@ A **Scenario** describes a hypothetical production strategy, including:
 
 A **Run** is one execution of a scenario:
 
-- Uniquely identified by `run_id` (UUID)
+- Uniquely identified by `run_id` (UUID v4)
 - **Append-only** (results are never overwritten)
 - Produces artifacts (datasets, logs, reports)
 - Stores KPIs and recommendations
@@ -185,22 +186,22 @@ A **Run** is one execution of a scenario:
 Machines / PLC / MES Export (Observed Data)
             │
             ▼
-Data Ingestion & Normalization
+Data Platform (Ingestion → Feature Engineering → Calibration)
             │
             ▼
 Platform Backend (.NET)
-  - Scenario & Run Management
-  - Audit & Versioning
-  - Job Orchestration
+  - ScenarioBuilder (merges user input + feature store + calibration)
+  - Adapter (canonical authority — validation, versioning, stage weights)
+  - Run Orchestration & Artifact Management
             │
             ├── Simulation Engine (C++)
-            ├── Analytics & Optimizer (Python)
+            ├── Analytics Engine (Python)
             │
             ▼
-KPIs & Recommendations (Database)
+KPIs & Recommendations (Database + Artifacts)
             │
             ▼
-GUI Client (WinForms)
+UI Client (React Web / WinForms Desktop)
 ```
 
 ---
@@ -210,22 +211,37 @@ GUI Client (WinForms)
 ```text
 ProductionOptimization/
 ├─ data/
-│ ├─ contracts/
-│ ├─ schemas/
-│ ├─ valdation/
-│ ├─ transforms/
-│ ├─ lineage/
-│ └─ documentation/
-├─ platform_dotnet/
-│ └─ Pidss.Platform.Api/
-├─ simulator_cpp/
-│ └─ Pidss.Simulator.Cli/
-├─ analytics/
-│ └─ Pidss.Analytics.Cli/
+│  ├─ contracts/          # Versioned example payloads
+│  ├─ schemas/            # JSON Schema definitions (Draft-07)
+│  ├─ validation/         # Validation scripts and tests
+│  ├─ transforms/         # Analytical transform definitions
+│  ├─ lineage/            # Artifact lineage policies
+│  └─ documentation/      # Domain model, data dictionary, versioning docs
+├─ platform/
+│  └─ Pidss.Platform/     # ASP.NET Core — orchestration, adapter, API
+├─ engines/
+│  ├─ simulation/
+│  │  └─ Pidss.Simulation/        # C++ CLI — aggregate simulation engine
+│  ├─ analytics/
+│  │  └─ Pidss.Analytics/         # Python CLI — KPI computation & recommendations
+│  └─ optimization/
+│     └─ Pidss.Optimization/      # Python CLI — batch scenario exploration
+├─ data_platform/
+│  ├─ ingestion/
+│  ├─ feature_engineering/
+│  ├─ calibration/
+│  └─ synthetic/mes/              # Synthetic MES data generator + API
 ├─ presentation/
-│ └─ Pidss.Destop.Winforms/
-├─ artifacts/
-└─ docs/
+│  ├─ web/
+│  │  └─ Pidss.Web.React/         # React SPA — primary UI client
+│  └─ desktop/
+│     └─ Pidss.Desktop.Winforms/  # WinForms — future desktop client
+├─ data_storage/
+│  ├─ feature_store/
+│  ├─ calibration_store/
+│  └─ model_store/
+├─ artifacts/                     # Run artifacts (append-only, gitignored)
+└─ docs/                          # Architecture and project-level documentation
 ```
 
 ---
@@ -236,10 +252,10 @@ ProductionOptimization/
 - Phase 1 — Domain & Canonical Model
 - Phase 2 — Public Contracts & Schemas
 - Phase 3 — Database & Run Metadata
-- Phase 4 — Platform & Adapter
+- Phase 4 — Platform Core (ScenarioBuilder + Adapter + Orchestration)
 - Phase 5 — C++ Simulation v1 (Aggregate Model)
 - Phase 6 — Python Analytics v1
-- Phase 7 — UI MVP
+- Phase 7 — UI
 - Phase 8 — Optimization Batch
 - Phase 9 — ML-based Decision Intelligence
 - Phase 10 — Observed Import (Optional / Future Extension)
@@ -249,4 +265,3 @@ ProductionOptimization/
 ## 14. License
 
 MIT License
-

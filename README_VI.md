@@ -16,7 +16,7 @@ Hệ thống giúp các đội ngũ sản xuất:
 
 PIDSS nằm **trên các hệ thống MES/ERP hiện hữu** và tập trung vào **đánh giá – so sánh – đề xuất**, không thực thi sản xuất.
 
-> **PIDSS không phải MES, không phải hệ thống lập lịch, và không phải hệ thống điều khiển thời gian thực.**  
+> **PIDSS không phải MES, không phải hệ thống lập lịch, và không phải hệ thống điều khiển thời gian thực.**
 > PIDSS là một **lớp Decision Support & Production Intelligence** dành cho planner, manager và digital/process engineer.
 
 ---
@@ -25,7 +25,7 @@ PIDSS nằm **trên các hệ thống MES/ERP hiện hữu** và tập trung và
 
 Các doanh nghiệp sản xuất hiện nay thường đặt ra mục tiêu chiến lược:
 
-> **Tăng năng lực sản xuất 40–60% trong 3–5 năm,  
+> **Tăng năng lực sản xuất 40–60% trong 3–5 năm,
 > mà không tăng nhân sự và không mở rộng diện tích nhà xưởng.**
 
 Trong khi đó, họ phải đối mặt với nhiều ràng buộc:
@@ -48,7 +48,7 @@ Trên thực tế, nhiều quyết định cải tiến và đầu tư hiện na
 
 PIDSS được thiết kế để trả lời câu hỏi:
 
-> **Làm thế nào để đánh giá và so sánh các phương án tối ưu hóa và automation  
+> **Làm thế nào để đánh giá và so sánh các phương án tối ưu hóa và automation
 > trước khi đầu tư, trong điều kiện ràng buộc thực tế của nhà máy?**
 
 Các câu hỏi nghiệp vụ chính bao gồm:
@@ -130,8 +130,8 @@ PIDSS cho phép các đội ngũ sản xuất:
 
 ## 8. Giá trị kinh doanh
 
-> **PIDSS giúp doanh nghiệp đánh giá các khoản đầu tư automation trị giá $500K  
-> trước khi chi tiền, bằng cách định lượng ROI và thời gian hoàn vốn (payback),  
+> **PIDSS giúp doanh nghiệp đánh giá các khoản đầu tư automation trị giá $500K
+> trước khi chi tiền, bằng cách định lượng ROI và thời gian hoàn vốn (payback),
 > thay vì chỉ dựa trên ước lượng cảm tính.**
 
 Giá trị mang lại:
@@ -147,11 +147,12 @@ Giá trị mang lại:
 
 | Khu vực | Công nghệ |
 | --- | --- |
-| Backend Platform | ASP.NET Core (.NET 8) |
+| Backend Platform | ASP.NET Core (.NET) |
 | Simulation Engine | C++ (aggregate digital twin) |
 | Analytics & Optimization | Python |
 | Database | SQL Server hoặc PostgreSQL |
-| UI Client | WinForms (.NET) |
+| UI Client (Web) | React (TypeScript + Vite) |
+| UI Client (Desktop) | WinForms (.NET) — tương lai |
 | Data Contracts | JSON + JSON Schema |
 | Kiến trúc | Run-based, append-only, versioned |
 
@@ -183,22 +184,22 @@ Giá trị mang lại:
 Machines / PLC / MES Export (Observed Data)
             │
             ▼
-Data Ingestion & Normalization
+Data Platform (Ingestion → Feature Engineering → Calibration)
             │
             ▼
 Platform Backend (.NET)
-  - Scenario & Run Management
-  - Audit & Versioning
-  - Job Orchestration
+  - ScenarioBuilder (gộp user input + feature store + calibration)
+  - Adapter (canonical authority — validation, versioning, stage weights)
+  - Run Orchestration & Artifact Management
             │
             ├── Simulation Engine (C++)
-            ├── Analytics & Optimizer (Python)
+            ├── Analytics Engine (Python)
             │
             ▼
-KPIs & Recommendations (Database)
+KPIs & Recommendations (Database + Artifacts)
             │
             ▼
-GUI Client (WinForms)
+UI Client (React Web / WinForms Desktop)
 ```
 
 ---
@@ -208,41 +209,54 @@ GUI Client (WinForms)
 ```text
 ProductionOptimization/
 ├─ data/
-│ ├─ contracts/
-│ ├─ schemas/
-│ ├─ valdation/
-│ ├─ transforms/
-│ ├─ lineage/
-│ └─ documentation/
-├─ platform_dotnet/
-│ └─ Pidss.Platform.Api/
-├─ simulator_cpp/
-│ └─ Pidss.Simulator.Cli/
-├─ analytics/
-│ └─ Pidss.Analytics.Cli/
+│  ├─ contracts/          # Payload ví dụ có phiên bản
+│  ├─ schemas/            # Định nghĩa JSON Schema (Draft-07)
+│  ├─ validation/         # Script và test validation
+│  ├─ transforms/         # Định nghĩa biến đổi phân tích
+│  ├─ lineage/            # Chính sách lineage artifact
+│  └─ documentation/      # Mô hình domain, từ điển dữ liệu, tài liệu phiên bản
+├─ platform/
+│  └─ Pidss.Platform/     # ASP.NET Core — orchestration, adapter, API
+├─ engines/
+│  ├─ simulation/
+│  │  └─ Pidss.Simulation/        # C++ CLI — engine mô phỏng tổng hợp
+│  ├─ analytics/
+│  │  └─ Pidss.Analytics/         # Python CLI — tính KPI & đề xuất
+│  └─ optimization/
+│     └─ Pidss.Optimization/      # Python CLI — khám phá scenario theo lô
+├─ data_platform/
+│  ├─ ingestion/
+│  ├─ feature_engineering/
+│  ├─ calibration/
+│  └─ synthetic/mes/              # Sinh dữ liệu MES tổng hợp + API
 ├─ presentation/
-│ └─ Pidss.Destop.Winforms/
-├─ artifacts/
-└─ docs/
+│  ├─ web/
+│  │  └─ Pidss.Web.React/         # React SPA — UI client chính
+│  └─ desktop/
+│     └─ Pidss.Desktop.Winforms/  # WinForms — desktop client tương lai
+├─ data_storage/
+│  ├─ feature_store/
+│  ├─ calibration_store/
+│  └─ model_store/
+├─ artifacts/                     # Artifact run (append-only, gitignored)
+└─ docs/                          # Tài liệu kiến trúc và dự án
 ```
 
 ---
 
 ## Lộ trình triển khai
 
-
 - Phase 0 — Repository Foundation & Data-Layer Conventions
 - Phase 1 — Domain & Canonical Model
 - Phase 2 — Public Contracts & Schemas
 - Phase 3 — Database & Run Metadata
-- Phase 4 — Platform & Adapter
+- Phase 4 — Platform Core (ScenarioBuilder + Adapter + Orchestration)
 - Phase 5 — C++ Simulation v1 (Aggregate Model)
 - Phase 6 — Python Analytics v1
-- Phase 7 — UI MVP
+- Phase 7 — UI
 - Phase 8 — Optimization Batch
 - Phase 9 — ML-based Decision Intelligence
 - Phase 10 — Observed Import (Optional / Future Extension)
-
 
 ## License
 
