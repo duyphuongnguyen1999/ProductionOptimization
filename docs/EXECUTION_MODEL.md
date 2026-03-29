@@ -82,7 +82,7 @@ When a single automated cell covers multiple SOP stages:
 1. Do **not** create new stage definitions
 2. Do **not** delete existing stage definitions
 3. Create a WorkUnit with `covered_stage_ids` containing all affected stages
-4. Provide an `integration` object with `stage_weights`
+4. The Platform Adapter will compute and embed `integration.stage_weights` into the canonical model
 
 ### stage_weights
 
@@ -91,8 +91,8 @@ Stage weights distribute the unit's cycle time attribution across the covered st
 Rules:
 - All weights must be positive
 - Weights must sum to exactly `1.0`
-- Platform Adapter computes weights if not provided in the public contract
-- The canonical model always contains explicit weights
+- **The Platform Adapter always computes and embeds `stage_weights`** when `covered_stage_ids.length > 1`. If the public scenario supplies explicit weights, the Adapter validates them; otherwise it applies the default policy. Either way, the canonical model always contains Adapter-materialized weights.
+- Engines never compute attribution — they consume pre-materialized weights from `canonical_scenario.json`
 
 Purpose of weights:
 - Bottleneck reporting per stage
@@ -139,12 +139,12 @@ Simulation must model capacity at the **stage resource pool level**, not at a fi
 
 ## 7. Public vs Canonical Model
 
-The **public contract** may use a simplified representation.
+The **public contract** (submitted by the client) may use a simplified representation.
 
-The **canonical model** (engine-facing) always materializes:
+The **canonical model** (engine-facing, produced by the Platform Adapter) always contains:
 - `covered_stage_ids` as an explicit array (never a single string)
-- `integration.stage_weights` explicitly when multi-stage
+- `integration.stage_weights` explicitly pre-materialized when `covered_stage_ids.length > 1`
 - No version branching or nullable ambiguity
+- All optional fields resolved to explicit defaults
 
-The **Platform Adapter** is responsible for all transformations between public and canonical.
-Engines never parse public schema versions.
+The **Platform Adapter** is the sole authority for all transformations between public and canonical. Engines never parse public schema versions. The canonical model never carries a `schema_version` field.
