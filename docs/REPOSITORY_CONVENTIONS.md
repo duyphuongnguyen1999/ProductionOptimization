@@ -38,7 +38,7 @@ ProductionOptimization/
 │     └─ Pidss.DataPlatform.Synthetic.Mes.Api/
 ├─ presentation/
 │  ├─ web/
-│  │  └─ Pidss.Web.React/      # React SPA — primary UI client
+│  │  └─ pidss-web-react/        # React SPA — primary UI client
 │  └─ desktop/
 │     └─ Pidss.Desktop.Winforms/ # WinForms — future desktop client
 ├─ data_storage/
