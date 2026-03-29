@@ -1,7 +1,7 @@
 # PIDSS Versioning Policy
 
-**Version:** 1.0.0  
-**Phase:** 0 — Repository Foundation & Data-Layer Conventions  
+**Version:** 1.0.0
+**Phase:** 0 — Repository Foundation & Data-Layer Conventions
 **Status:** Active
 
 ---
@@ -17,7 +17,7 @@ PIDSS maintains two separate models with different versioning strategies:
 
 The key architectural rule:
 
-> **Public schemas evolve. Canonical model stays stable.**  
+> **Public schemas evolve. Canonical model stays stable.**
 > The Platform adapter layer is responsible for all version translation.
 
 ---
@@ -110,7 +110,7 @@ Canonical model changes are rare and **breaking** by definition. If a change is 
 
 ## 4. Adapter Responsibility
 
-The Platform (`platform_dotnet/Pidss.Platform.Api`) is the **only** component that:
+The Platform (`platform/Pidss.Platform`) is the **only** component that:
 
 - Reads and validates the `schema_version` field.
 - Selects the appropriate JSON schema for validation.
@@ -126,11 +126,11 @@ Public Payload (v2.0) ──► Platform Adapter ──► Canonical Scenario (s
 ### Adapter Location
 
 ```
-platform_dotnet/Pidss.Platform.Api/
+platform/Pidss.Platform/
 └─ Adapters/
-   ├─ ScenarioAdapterV1.cs
-   ├─ ScenarioAdapterV2.cs    (when v2 is introduced)
-   └─ IScenarioAdapter.cs
+   ├─ IScenarioAdapter.cs
+   ├─ ScenarioAdapterV1.cs    (handles schema_version = "1.0")
+   └─ ScenarioAdapterV2.cs    (when v2 is introduced)
 ```
 
 ---
