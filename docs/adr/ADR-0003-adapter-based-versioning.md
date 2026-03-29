@@ -1,8 +1,8 @@
 # ADR-0003: Adapter-Based Versioning and Canonical Model Stability
 
-**Status:** Accepted  
-**Date:** Phase 0 — Revised under Master Prompt Realignment  
-**Authors:** PIDSS Platform Team  
+**Status:** Accepted
+**Date:** Phase 0 — Revised under Master Prompt Realignment
+**Authors:** PIDSS Platform Team
 
 ---
 
@@ -68,7 +68,7 @@ If the public scenario provides explicit weights, the adapter validates and pass
 ### Adapter Location
 
 ```
-platform_dotnet/Pidss.Platform.Api/Adapters/
+platform/Pidss.Platform/Adapters/
 ├─ IScenarioAdapter.cs
 ├─ ScenarioAdapterV1.cs     # handles schema_version = "1.0"
 └─ ScenarioAdapterV2.cs     # (future) handles schema_version = "2.0"
