@@ -31,53 +31,43 @@ The system must support financial evaluation:
 
 # 2. REAL FACTORY CONTEXT (FINALIZED DOMAIN REALITY)
 
-## 2.1. Process
+## 2.1. Product Hierarchy
 
-Transforms raw materials → component or final product.  
+PIDSS distinguishes three types of manufactured products and one type of non-manufactured input.
+
+### FinishedProduct
+- The final saleable output of the factory
+- Has a `bill_of_materials[]` referencing semi-products and materials
+- `bill_of_materials` appears ONLY on finished_product
+
+### SemiProduct
+- Output of a complete Process
+- Consumed by FinishedProduct BOM or by another Process
+- Produced at the final Stage of its Process
+
+### IntermediateProduct
+- Output of a single Stage within a Process
+- Consumed only by the next Stage in the same Process
+- Must be declared in `products[]`
+
+### Material
+- Raw materials or purchased components NOT manufactured in the factory
+- Appear as Stage inputs and FinishedProduct BOM entries
+- Never produced by any Stage
+
+## 2.2. Process
+
+Transforms raw materials and intermediate products → SemiProduct.
 
 Defined by SOP. Rarely changes.
 
 A factory may contain multiple processes.
 
-Some processes produce:
-- Components (semi-finished goods)
-- Final products (assembly / packaging)
+`output_product_id` must reference a `semi_product` in `products[]`.
 
-## 2.2. Component
+## 2.3. Stage
 
-Output of a process.
-
-Consumed by downstream process via BOM.
-
-Modeled in aggregate only (no WIP tracking).
-
-## 2.3. Product (Final Product)
-
-Assembled or packaged from multiple components.
-
-Final production capacity is constrained by:
-
-- Final assembly capacity
-- Upstream component availability
-
-## 2.4. BOM (Bill of Materials)
-
-Defines:
-
-- product - component mapping
-- quantity_required_per_product
-
-Final output limited by minimum component availability.
-
-Important:
-
-BOM NOT directly in scenario
-
-→ must be transformed by ScenarioBuilder
-
-## 2.5. Stage
-
-A stable SOP step within a process.
+A stable SOP step within a Process.
 
 Stage represents business traceability and comparability.
 
@@ -86,36 +76,64 @@ Stage contains:
 - stage_id
 - order
 - name
+- eligible_work_unit_model_ids[] (REQUIRED — models that may serve this stage)
+- input[] (materials and products)
+- output[] (products)
+- wip_model (buffer after this stage; null on last stage)
 
-Critical rule:
+Critical rules:
 
-> Stage identity MUST NEVER be deleted  
-Stage identity MUST NEVER be replaced by automation.  
-Stage contains NO execution logic.
+> Stage identity MUST NEVER be deleted
+> Stage identity MUST NEVER be replaced by automation.
+> Stage contains NO execution logic.
 
+## 2.4. WIP Model (on Stage)
 
-## 2.6. Work Unit (Execution Unit)
+Each Stage (except the last in a Process) carries a `wip_model` defining the buffer between it and the next Stage:
 
-Execution is equipment-centric.
+- buffer_id
+- capacity_units
+- initial_wip_units
+- buffer_policy (type: "fifo")
 
-A WorkUnit may represent:
+The final Stage of each Process has `wip_model: null`.
 
-- Manual workbench
-- Semi-automatic machine
-- Fully automatic machine
+## 2.5. Work Unit Model (Dòng máy)
+
+Defines the class characteristics shared by all physical machines of the same model.
+
+This is a TEMPLATE, not a physical instance.
+
+Each WorkUnitModel defines:
+
+- model_id
+- type (manual / semi_auto / auto)
+- covered_stage_ids[] (minItems = 1, ALWAYS array)
+- operators_per_unit
+- requires_operator_presence
+- footprint_m2
+- unit_buffer_area_m2
+- transfer_delay_sec
+- batch_size
+- cycle_time_default (mean_sec, stddev_sec)
+- reliability (optional)
+- financial (optional)
+- integration (REQUIRED when covered_stage_ids.length > 1)
+
+A WorkUnitModel is bound to specific stages. It does NOT reuse across different processes.
+
+## 2.6. Work Unit (Máy vật lý cụ thể)
+
+A specific physical machine on the production floor.
 
 Each WorkUnit defines:
 
-- unit_id
-- unit_type (manual / semi_auto / auto)
-- covered_stage_ids[] (minItems = 1)
-- count
-- cycle_time distribution
-- operators_per_unit
-- requires_operator_presence
-- reliability (optional)
-- footprint_m2 (optional)
-- financial attributes (optional)
+- work_unit_id (globally unique)
+- work_unit_model_id (reference to model)
+- cycle_time (actual — may differ from model default due to age/wear)
+- age_years
+
+Machines of the same model may have different actual cycle times.
 
 ## 2.7. Integration Concept
 
@@ -123,56 +141,71 @@ Integrated cell is NOT a separate type.
 
 Integration is defined by:
 
-- `covered_stage_ids.length` > 1
+- `covered_stage_ids.length` > 1 on the WorkUnitModel
 
 If multiple stages are covered, then:
 
-- An `integration` object must exist
-- Adapter MUST compute `stage_weights` 
+- An `integration` object must exist on the WorkUnitModel
+- `integration.internal_transfer_eliminated` (boolean)
+- Adapter MUST compute `stage_weights`
 - `stage_weights` MUST be explicitly materialized in canonical
+- `stage_weights` values must sum to exactly 1.0
 
-## 2.8 Line
+## 2.8. Shift
 
-Logical replication of process.
+A working time window within a day.
 
-Important:
-- Resources are NOT necessarily 1:1 with lines.  
-- Capacity must be modeled at stage resource pool level.
+Each Shift defines:
 
-### 2.8.1. Example: Assembly Process (7 Stages)
+- shift_id
+- start_minute_of_day
+- duration_minutes
+- net_labor_minutes
+- performance_factor (0–1.0, scales throughput)
+- breaks[] with coverage_mode (all_stop | staggered) and min_coverage_ratio
 
-1. Pressing (semi-auto) – 6–7 sec
-2. Welding (semi-auto) – 7–8 sec
-3. Manual assembly – ~12 sec
-4. Manual connection – 15–17 sec
-5. Manual coating – 15–17 sec
-6. Silicon processing (semi-auto) – ~20 sec
-7. Visual inspection (manual) – ~12 sec
+## 2.9. Day
 
-Manual stations:
-- Parallel workbenches
-- 1–4 operators per bench
+Associates a day type with shift configuration and multipliers.
 
-Semi-auto:
-- Machine-human coupling
-- Machine may wait for operator
-- Operator may wait for machine
+Day types: weekday, weekend, holiday, special
 
-### 2.8.2. Line vs Stage Capacity Reality
+Each Day defines:
+
+- day_id
+- shift_ids[] (which shifts run)
+- day_performance_factor
+- labor_cost_factor
+- min/max_coverage_ratio
+
+## 2.10. Calendar and Demand
+
+Calendar maps actual dates to day types and contains the demand plan.
+
+CRITICAL: There is NO top-level `planning_period` field.
+Demand lives exclusively in `calendar.demand`.
+
+`calendar.demand` contains:
+
+- target_output_qty
+- planning_unit (shift | day)
+- periods[] with per-shift or per-day targets
+
+## 2.11. Line vs Stage Capacity Reality
 
 There are 7 lines.
 
 However:
 
-- Pressing & Heating: exactly 7 machines
-- Other stages: more than 7 workstations
+- Pressing & Welding: exactly 7 machines each
+- Manual stages: more workstations than lines
 
 Therefore:
 
-> Capacity constraints must be modeled at stage resource pools,
+> Capacity constraints must be modeled at stage resource pools (WorkUnits),
 > NOT at fixed line mapping.
 
-## 2.9. Batch Flow Reality
+## 2.12. Batch Flow Reality
 
 Current production flow is batch-gated:
 
@@ -187,18 +220,17 @@ Automation goal includes:
 - Reducing footprint
 - Increasing throughput
 
-## 2.10. Critical Rule — Integrated Automated Cell
+## 2.13. Critical Rule — Integrated Automated Cell
 
 When one automated cell integrates multiple stages:
 
 - DO NOT create new SOP stages
 - DO NOT delete original stage identity
-- Model automation as execution override
-- Preserve stage-level comparability
+- Model automation as WorkUnitModel with covered_stage_ids.length > 1
+- Preserve stage-level comparability for A/B analysis
 
 This ensures:
 
 - A/B comparison validity
 - SOP traceability
 - Bottleneck reporting consistency
-
