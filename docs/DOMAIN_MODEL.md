@@ -5,7 +5,7 @@
   | 🇻🇳 <a href="DOMAIN_MODEL_VI.md">Tiếng Việt</a>
 </p>
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Phase:** 1 — Domain & Canonical Model  
 **Status:** Active
 
@@ -19,380 +19,423 @@ The domain model is the foundation of the **canonical scenario**: the engine-fac
 
 ---
 
-## 2. Core Domain Entities
+## 2. Product Hierarchy
 
-### 2.1 Factory
+PIDSS distinguishes three types of products manufactured within the factory, plus materials that are not manufactured:
 
-The top-level container for a production scenario. A factory has a hard physical floor space limit (`factory_footprint_limit_m2`) that all automation scenarios must respect.
+### 2.1 FinishedProduct
 
-A factory contains one or more **Processes**, connected via a **BOM**.
+The final saleable output of the factory. Assembled or packaged from semi-products and materials.
+
+| Field | Rule |
+|---|---|
+| `product_id` | string slug, stable |
+| `type` | always `"finished_product"` |
+| `bill_of_materials[]` | **required** — list of semi-products and materials with quantities |
+
+`bill_of_materials` appears **only** on `finished_product`. It must not appear on `semi_product` or `intermediate_product`.
+
+Final production quantity is constrained by BOM availability:
+```
+Final Capacity = min over all BOM semi-product entries of
+    (semi_product_throughput / quantity_required_per_product)
+```
+
+### 2.2 SemiProduct
+
+The output of a complete Process. Consumed by a FinishedProduct BOM or by another Process.
+
+| Field | Rule |
+|---|---|
+| `product_id` | string slug, stable |
+| `type` | always `"semi_product"` |
+
+A SemiProduct is the final output of a Process — it is produced at the last Stage of that Process.
+
+### 2.3 IntermediateProduct
+
+The output of a single Stage within a Process. Consumed only by the next Stage in the same Process.
+
+| Field | Rule |
+|---|---|
+| `product_id` | string slug, stable |
+| `type` | always `"intermediate_product"` |
+
+IntermediateProducts represent in-process WIP between consecutive stages. They must be declared in `products[]` and referenced in stage `input[]` and `output[]`.
+
+### 2.4 Material
+
+Raw materials or purchased components that are **not manufactured** within the factory.
+
+| Field | Rule |
+|---|---|
+| `material_id` | string slug, stable |
+| `name` | human-readable label |
+
+Materials appear as inputs to Stages and as BOM entries in FinishedProducts. They are never produced by any Stage.
 
 ---
 
-### 2.2 Process
+## 3. Core Structural Entities
 
-A defined manufacturing workflow that transforms inputs into a **Component** or **Product**.
+### 3.1 Factory
+
+The top-level container for a production scenario.
+
+| Field | Type | Rule |
+|---|---|---|
+| `footprint_limit_m2` | float | hard physical floor space limit; Analytics detects FM-08 when exceeded |
+| `layout_factor` | float | aisle/movement multiplier (default 1.3); range 1.2–1.4 |
+
+### 3.2 Process
+
+A defined manufacturing workflow that transforms inputs into a SemiProduct.
 
 | Field | Type | Rule |
 |---|---|---|
 | `process_id` | string slug | stable, never renamed |
-| `output.type` | `component` or `product` | defines what this process produces |
-| `output.component_id` / `output.product_id` | string slug | consumed by BOM |
-| `stages[]` | array | ordered SOP steps |
-| `work_units[]` | array | execution resources |
-| `batch_size` | integer | units transferred per batch |
-| `transfer_delay_sec` | integer | inter-stage handoff delay in seconds |
-| `unit_buffer_area_m2` | float | floor area per WIP unit at stage boundaries |
+| `output_product_id` | string | must reference a `semi_product` in `products[]` |
+| `stages[]` | array | ordered SOP steps — see Stage definition |
 
-Multiple processes may run in parallel. Final product capacity is constrained by BOM availability across all upstream processes.
+Processes may run in parallel. Final product capacity is constrained by BOM availability across all upstream processes.
 
----
+### 3.3 Stage — SOP Identity Layer
 
-### 2.3 Component
-
-The output of a process that produces semi-finished goods. Consumed by a downstream process via the BOM.
-
-- Aggregate only — no WIP tracking per unit
-- Identified by `component_id` (string slug)
-- Not tracked per serial/lot
-
----
-
-### 2.4 Product (Final Product)
-
-The final manufactured output assembled or packaged from one or more Components.
-
-Final production quantity = `min over all BOM entries of (component_throughput / qty_required_per_product)`
-
----
-
-### 2.5 BOM (Bill of Materials)
-
-Defines the Components required to produce one unit of a Product.
-
-```json
-{
-  "product_id": "finished_product_a",
-  "component_id": "sub_assembly_unit",
-  "quantity_required_per_product": 1
-}
-```
-
-BOM is stored at the top level of the canonical scenario. It is **never** stored in the relational database.
-
-Analytics uses BOM to identify the binding upstream bottleneck across processes.
-
----
-
-### 2.6 Stage — SOP Identity Layer
-
-A Stage is a single, stable SOP step within a Process.
-
-**Stages are the unit of business traceability and A/B comparability.**
+A Stage is a single, stable SOP step within a Process. **Stages are the unit of business traceability and A/B comparability.**
 
 | Field | Type | Rule |
 |---|---|---|
-| `stage_id` | string slug | immutable — never renamed, deleted, or replaced |
+| `stage_id` | string slug | **immutable** — never renamed, deleted, or replaced |
 | `order` | integer | position in the SOP sequence |
 | `name` | string | human-readable label |
+| `eligible_work_unit_model_ids[]` | string[] | **required** — models that may serve this stage |
+| `input[]` | array | materials and products entering this stage |
+| `output[]` | array | products produced by this stage |
+| `wip_model` | object or null | WIP buffer configuration after this stage |
 
 **Critical rule: A Stage contains NO execution logic.**
 
-There is no cycle time, operator count, automation type, or capacity field on a Stage. All execution is defined by WorkUnits.
+There is no cycle time, operator count, automation type, or capacity field on a Stage. All execution is defined by WorkUnitModels and WorkUnits.
 
-Stages are never deleted, renamed to an automation label, or replaced when automation is introduced. Automation changes the WorkUnit configuration, not the Stage definition.
+**Stage Identity Preservation Rule:**
 
----
+> A Stage MUST NEVER be deleted, renamed to an automation label, or replaced by an automated cell.
 
-### 2.7 WorkUnit — Execution Layer
+Automation changes the WorkUnit configuration, not the Stage definition. Stages are the stable anchor for A/B comparison and bottleneck reporting across all scenarios.
 
-A WorkUnit is a physical or logical execution resource assigned to one or more Stages.
+#### Stage Input / Output
+
+Each stage item has `type` and `id`:
+
+| `type` value | `id` references |
+|---|---|
+| `material` | a `material_id` in `materials[]` |
+| `intermediate_product` | a `product_id` in `products[]` where `type == "intermediate_product"` |
+| `semi_product` | a `product_id` in `products[]` where `type == "semi_product"` |
+
+The first stage of a process takes materials and/or intermediate products as input.  
+The last stage of a process produces a `semi_product`.  
+All intermediate stages produce `intermediate_product` and consume the prior stage's output.
+
+#### Stage WIP Model
+
+The `wip_model` defines the WIP buffer **downstream** of this stage (i.e., between this stage and the next):
+
+```json
+"wip_model": {
+  "buffer_id": "buf_pressing_to_welding",
+  "capacity_units": 1200,
+  "initial_wip_units": 0,
+  "buffer_policy": { "type": "fifo" }
+}
+```
+
+| Field | Rule |
+|---|---|
+| `buffer_id` | unique identifier for this buffer |
+| `capacity_units` | maximum WIP units the buffer can hold |
+| `initial_wip_units` | WIP present at simulation start (typically 0) |
+| `buffer_policy.type` | flow discipline: `"fifo"` (default) |
+
+The last stage of a process has `"wip_model": null` — there is no buffer after the final stage output.
+
+### 3.4 WorkUnitModel — Equipment Class Definition
+
+A WorkUnitModel defines the **class characteristics** shared by all physical machines of the same model (dòng máy). It is a template — not a physical instance.
 
 | Field | Type | Rule |
 |---|---|---|
-| `unit_id` | string slug | stable identifier |
-| `unit_type` | `manual` \| `semi_auto` \| `auto` | automation level |
-| `covered_stage_ids[]` | string[] | **always an array, minimum one element** |
-| `count` | integer | number of identical units in the pool |
-| `cycle_time.mean_sec` | float | mean processing time in seconds |
-| `cycle_time.stddev_sec` | float | standard deviation in seconds |
+| `model_id` | string slug | stable identifier for this equipment class |
+| `name` | string | human-readable model name |
+| `type` | `manual` \| `semi_auto` \| `auto` | automation level |
+| `covered_stage_ids[]` | string[] | **always an array, min 1 element** — stages this model serves |
 | `operators_per_unit` | integer | operators required per unit (0 for fully auto) |
 | `requires_operator_presence` | boolean | if true, unit stops during breaks |
-| `reliability` | object (optional) | MTBF, MTTR, age, useful life |
-| `footprint_m2` | float (optional) | floor area per unit |
-| `financial` | object (optional) | CAPEX, OPEX, useful life for ROI |
+| `footprint_m2` | float | floor area per physical unit |
+| `unit_buffer_area_m2` | float | floor area per WIP unit at this stage's buffer |
+| `transfer_delay_sec` | integer | batch handoff delay in seconds |
+| `batch_size` | integer | units per transfer batch |
+| `cycle_time_default` | object | `mean_sec`, `stddev_sec` — default cycle time for this model |
+| `reliability` | object (optional) | `mtbf_hours`, `mttr_minutes`, `useful_life_years`, `degradation_model` |
+| `financial` | object (optional) | `capex_usd`, `opex_usd_per_year`, `useful_life_years` |
+| `integration` | object (conditional) | **required** when `covered_stage_ids.length > 1` |
 
-> **Critical: There is no `stage_id` singular field on WorkUnit.**  
-> Only `covered_stage_ids[]` exists. It is always an array.  
-> For a single-stage WorkUnit, it is a one-element array: `["pressing"]`
+**Critical: There is no `stage_id` singular field on WorkUnitModel.**  
+Only `covered_stage_ids[]` exists. It is always an array.
 
----
+A WorkUnitModel is bound to a specific set of stages. It does **not** reuse across different processes.
 
-### 2.8 Integration — Multi-Stage Coverage
+#### Integration on WorkUnitModel
 
-Integration is **not a WorkUnit type**. It is a **structural condition**.
-
-| Condition | Meaning |
-|---|---|
-| `covered_stage_ids.length == 1` | Single-stage WorkUnit |
-| `covered_stage_ids.length > 1` | Integrated WorkUnit |
-
-Integration is **orthogonal to automation level**:
-- A `manual` bench covering two stages = integrated manual unit
-- A `semi_auto` machine covering pressing + welding = integrated semi-auto unit
-- An `auto` machine covering three stages = integrated auto unit
-
-When `covered_stage_ids.length > 1`, the canonical model **must** include an `integration` object:
+When `covered_stage_ids.length > 1`, the model **must** carry an `integration` object:
 
 ```json
 "integration": {
+  "internal_transfer_eliminated": true,
   "stage_weights": {
-    "packaging_insert": 0.55,
-    "packaging_seal": 0.45
+    "pressing": 0.46,
+    "welding": 0.54
   }
 }
 ```
 
-`stage_weights` values must sum to exactly `1.0`.
+| Field | Rule |
+|---|---|
+| `internal_transfer_eliminated` | boolean — if true, no transfer delay between covered stages |
+| `stage_weights` | map of `{ stage_id: float }` — must sum to exactly 1.0 |
 
-**Stage weights are computed and materialized by the Platform Adapter** — never by engines.
+Stage weights are **pre-materialized by the Platform Adapter** in the canonical model. Engines never compute attribution.
+
+### 3.5 WorkUnit — Physical Equipment Instance
+
+A WorkUnit represents a **specific physical machine** on the production floor.
+
+| Field | Type | Rule |
+|---|---|---|
+| `work_unit_id` | string slug | **globally unique** across all work units |
+| `work_unit_model_id` | string | reference to a `model_id` in `work_unit_models[]` |
+| `cycle_time` | object | `mean_sec`, `stddev_sec` — actual cycle time for this machine (may differ from model default due to wear or calibration) |
+| `age_years` | float | current age of this specific machine |
+
+Machines of the same model type may have different actual cycle times due to age, wear, or individual calibration. The `cycle_time` on a WorkUnit overrides `cycle_time_default` from its model.
 
 ---
 
-### 2.9 Stage Weights
+## 4. Shift and Calendar Model
 
-Stage weights are the normalized attribution map distributing a WorkUnit's execution contribution across its covered Stages.
+### 4.1 Shift
 
-**Purpose:**
-- Bottleneck reporting per stage (engines attribute output to each stage via weights)
-- A/B comparison validity (consistent per-stage KPIs across scenarios)
-- SOP traceability (execution always traces back to a stage)
+A Shift defines a working time window within a day.
 
-**Rules:**
-- Required when `covered_stage_ids.length > 1`
-- Must be pre-materialized in `canonical_scenario.json` before engines receive it
-- Engines never compute attribution — they consume pre-computed weights
-- Values must be positive and sum to exactly 1.0
+| Field | Rule |
+|---|---|
+| `shift_id` | stable identifier |
+| `start_minute_of_day` | minutes since midnight (e.g., 360 = 06:00) |
+| `duration_minutes` | total shift length |
+| `net_labor_minutes` | actual productive minutes after all breaks |
+| `performance_factor` | float 0–1.0; scales throughput for this shift (e.g., 0.95 for evening shift) |
+| `breaks[]` | list of break definitions within this shift |
+
+#### Break Definition
+
+| Field | Rule |
+|---|---|
+| `start_minute_from_shift_start` | offset from shift start |
+| `duration_minutes` | break length |
+| `type` | `"meeting"` \| `"rest"` \| `"meal"` |
+| `coverage_mode` | `"all_stop"` — all units stop; `"staggered"` — operators rotate through break |
+| `min_coverage_ratio` | minimum fraction of operators that must remain active during staggered break |
+
+Break impact on WorkUnits is determined by `requires_operator_presence`:
+- `true` → unit stops during the break window
+- `false` → unit continues through breaks (unattended auto only)
+
+### 4.2 Day
+
+A Day definition specifies which shifts run and applies day-level multipliers.
+
+| Field | Rule |
+|---|---|
+| `day_id` | `weekday`, `weekend`, `holiday`, `special` |
+| `shift_ids[]` | which shifts are active on this day type |
+| `day_performance_factor` | float 0–1.0; applied on top of shift performance factor |
+| `labor_cost_factor` | multiplier for labor cost (e.g., 2.0 for weekend) |
+| `min_coverage_ratio` | minimum fraction of workforce that must be present |
+| `max_coverage_ratio` | maximum fraction of workforce available |
+
+### 4.3 Calendar
+
+The calendar maps actual dates to day types, declares exceptions and overtime, and contains the demand plan.
+
+| Field | Rule |
+|---|---|
+| `meta_data.timezone` | IANA timezone string |
+| `meta_data.aggregation_interval_minutes` | simulation time step |
+| `time_horizon.start_time` | ISO 8601 UTC |
+| `time_horizon.end_time` | ISO 8601 UTC |
+| `overtime[]` | list of `{ date, type }` — working days that override default type |
+| `exceptions[]` | list of `{ date, type, note }` — holidays, shutdowns, special days |
+
+### 4.4 Demand
+
+Demand is contained within `calendar.demand`. There is **no** top-level `planning_period` field.
+
+| Field | Rule |
+|---|---|
+| `target_output_qty` | total target finished product quantity for the time horizon |
+| `planning_unit` | granularity of demand: `"shift"` \| `"day"` |
+| `periods[]` | list of `{ period_id, date, shift_id, target_qty }` |
 
 ---
 
-## 3. Execution Modeling
+## 5. Execution Modeling
 
-### 3.1 Automation Levels
+### 5.1 Automation Levels
 
-| `unit_type` | Behavior |
+| `type` | Behavior |
 |---|---|
 | `manual` | Human-operated; stops during breaks |
 | `semi_auto` | Machine-human coupling; stops during breaks |
-| `auto` | Fully automatic; may continue through breaks if `requires_operator_presence = false` |
+| `auto` | Fully automatic; continues through breaks if `requires_operator_presence = false` |
 
-### 3.2 Batch Flow
+### 5.2 Batch Flow
 
-Current production flow is batch-gated:
-
-- `batch_size`: number of units transferred per batch
-- `transfer_delay_sec`: delay per inter-stage transfer (checksheet, confirmation)
-- Transfer occurs only after a full batch is completed
-
-WIP accumulation at stage boundaries is estimated as:
-
-```
-WIP_stage ≈ Throughput × Effective_Wait_Time
-```
-
-Where effective wait time includes batch gating delay + transfer delay + downstream congestion.
+- `batch_size`: units transferred per batch per stage boundary
+- `transfer_delay_sec`: confirmation/checksheet delay per batch transfer
+- Transfer occurs only after a full batch is accumulated
 
 Average WIP at a batch-gated boundary ≈ `batch_size / 2` in steady state.
 
-### 3.3 Reliability
+```
+WIP_stage ≈ Throughput × Effective_Wait_Time
+Effective_Wait_Time = batch_gating_delay + transfer_delay + downstream_congestion
+```
 
-Each WorkUnit may carry reliability data for downtime modeling and investment ROI analysis:
+### 5.3 Reliability
 
-| Field | Unit | Purpose |
-|---|---|---|
-| `mtbf_hours` | hours | Mean Time Between Failures |
-| `mttr_minutes` | minutes | Mean Time To Repair |
-| `age_years` | years | current equipment age |
-| `useful_life_years` | years | manufacturer-defined service life |
-| `degradation_model` | enum/null | availability decay model |
+| Field | Unit |
+|---|---|
+| `mtbf_hours` | hours |
+| `mttr_minutes` | minutes |
+| `useful_life_years` | years |
+| `degradation_model` | `"linear"` or null |
 
-Derived availability: `mtbf / (mtbf + mttr/60)`
+Derived: `availability = mtbf / (mtbf + mttr/60)`
 
-When reliability data is absent, engines treat the WorkUnit as having 100% theoretical availability.
+When absent, engines treat the WorkUnit as having 100% theoretical availability.
 
-### 3.4 Break Behavior
+### 5.4 Determinism
 
-Break impact is determined entirely by `requires_operator_presence` on each WorkUnit:
-- `true` → unit stops during all breaks (manual, semi_auto, and attended auto)
-- `false` → unit continues through breaks (unattended auto only)
-
-Engines apply break impact deterministically from this field. No inference required.
-
-### 3.5 Determinism
-
-Every canonical scenario contains a `random_seed` integer. This guarantees:
+`meta.random_seed` is **always present** in the canonical scenario:
 
 ```
 Same canonical scenario + same seed → identical simulation outputs
 ```
 
-The Platform Adapter assigns a seed if the public scenario omits it.
-
 ---
 
-## 4. Production Footprint Model
-
-The canonical model carries all fields required to compute production floor area:
+## 6. Production Footprint Model
 
 ```
 Production_Footprint = (Machine_Area + WIP_Area) × Layout_Factor
 ```
 
-| Component | Formula | Source |
-|---|---|---|
-| `machine_area_m2` | `Σ (unit.count × unit.footprint_m2)` | canonical WorkUnit fields |
-| `wip_area_m2` | `Σ (WIP_stage × unit_buffer_area_m2)` | simulation WIP + canonical field |
-| `production_footprint_m2` | `(machine_area + wip_area) × layout_factor` | computed by simulator |
+| Component | Formula |
+|---|---|
+| `machine_area_m2` | `Σ (count_of_model_instances × model.footprint_m2)` |
+| `wip_area_m2` | `Σ (WIP_stage × model.unit_buffer_area_m2)` per stage buffer |
+| `production_footprint_m2` | `(machine_area + wip_area) × layout_factor` |
 
-`factory_footprint_limit_m2` is the hard constraint. Analytics detects FM-08 (Footprint Constraint Violation) when `production_footprint_m2 > factory_footprint_limit_m2`.
+`factory.footprint_limit_m2` is the hard constraint. FM-08 is triggered when `production_footprint_m2 > footprint_limit_m2`.
 
 ---
 
-## 5. Canonical Scenario Structure
-
-The canonical scenario is the **stable internal execution contract** between the Platform adapter and all engines.
+## 7. Canonical Scenario Top-Level Structure
 
 ```
 canonical_scenario.json
-├── factory_footprint_limit_m2      (float)      hard space constraint
-├── layout_factor                   (float)      aisle/movement multiplier (default 1.3)
-├── random_seed                     (integer)    always present
-├── planning_period
-│   ├── start_time                  (ISO 8601 UTC)
-│   ├── end_time                    (ISO 8601 UTC)
-│   └── target_output_qty           (integer)
-├── shift_calendar
-│   ├── shifts[]
+├── meta
+│   ├── version                      string
+│   └── random_seed                  integer    (always present)
+├── factory
+│   ├── footprint_limit_m2           float
+│   └── layout_factor                float
+├── shifts[]
+│   ├── shift_id, name
+│   ├── start_minute_of_day, duration_minutes, net_labor_minutes
+│   ├── performance_factor
 │   └── breaks[]
+├── days[]
+│   ├── day_id, name, shift_ids[]
+│   ├── day_performance_factor, labor_cost_factor
+│   └── min/max_coverage_ratio
+├── materials[]
+│   └── material_id, name
+├── products[]
+│   ├── product_id, name, type       ("intermediate_product" | "semi_product" | "finished_product")
+│   └── bill_of_materials[]          (only on finished_product)
 ├── processes[]
-│   ├── process_id                  (string slug)
-│   ├── output
-│   │   ├── type                    ("component" | "product")
-│   │   └── component_id / product_id
-│   ├── stages[]
-│   │   ├── stage_id                (string slug, immutable)
-│   │   ├── order                   (integer)
-│   │   └── name                    (string)
-│   ├── work_units[]
-│   │   ├── unit_id                 (string slug)
-│   │   ├── unit_type               ("manual" | "semi_auto" | "auto")
-│   │   ├── covered_stage_ids[]     (string[], minItems=1, ALWAYS array)
-│   │   ├── count                   (integer)
-│   │   ├── cycle_time
-│   │   │   ├── mean_sec            (float)
-│   │   │   └── stddev_sec          (float)
-│   │   ├── operators_per_unit      (integer)
-│   │   ├── requires_operator_presence (boolean)
-│   │   ├── integration             (object, REQUIRED if covered_stage_ids.length > 1)
-│   │   │   └── stage_weights       ({ stage_id: float }, sum = 1.0)
-│   │   ├── reliability             (optional)
-│   │   │   ├── mtbf_hours
-│   │   │   ├── mttr_minutes
-│   │   │   ├── age_years
-│   │   │   ├── useful_life_years
-│   │   │   └── degradation_model
-│   │   ├── footprint_m2            (optional float)
-│   │   └── financial               (optional)
-│   │       ├── capex_usd
-│   │       ├── opex_usd_per_year
-│   │       └── useful_life_years
-│   ├── batch_size                  (integer)
-│   ├── transfer_delay_sec          (integer)
-│   └── unit_buffer_area_m2         (float)
-└── bom[]
-    ├── product_id
-    ├── component_id
-    └── quantity_required_per_product
-```
-
-### Canonical Model Invariants
-
-1. No `schema_version` field — the canonical model is always current
-2. No `oneOf`, `anyOf`, or nullable ambiguity — all fields are flat and unambiguous
-3. `covered_stage_ids[]` is always an array on every WorkUnit — no singular `stage_id` field exists
-4. `integration.stage_weights` is always pre-materialized when `covered_stage_ids.length > 1`
-5. `random_seed` is always present
-6. All time values in seconds; all timestamps in UTC ISO 8601
-7. `factory_footprint_limit_m2` is always present at the top level
-8. All flow policy fields (`batch_size`, `transfer_delay_sec`, `unit_buffer_area_m2`) are always explicit
-
----
-
-## 6. Stage Identity Preservation Rule
-
-> **A Stage MUST NEVER be deleted, renamed to an automation label, or replaced by an automated cell.**
-
-When modeling automation that covers Stage `manual_assembly` and `manual_connection`:
-
-**Incorrect:** delete stages and create a new `integrated_auto_stage`
-
-**Correct:**
-```json
-"stages": [
-  { "stage_id": "manual_assembly",   "order": 3, "name": "Manual Assembly" },
-  { "stage_id": "manual_connection", "order": 4, "name": "Manual Connection" }
-],
-"work_units": [
-  {
-    "unit_id": "integrated_cell_01",
-    "unit_type": "auto",
-    "covered_stage_ids": ["manual_assembly", "manual_connection"],
-    "integration": {
-      "stage_weights": {
-        "manual_assembly": 0.45,
-        "manual_connection": 0.55
-      }
-    }
-  }
-]
-```
-
-The Stages remain. The WorkUnit changes. Comparability is preserved.
-
----
-
-## 7. Multi-Process and BOM
-
-A factory scenario may contain multiple Processes running in parallel. Each process produces either a Component or a Product.
-
-The top-level `bom[]` array defines how Components are consumed to produce a final Product:
-
-```
-Process A → sub_assembly_unit (component)
-                    ↓
-               BOM: 1 × sub_assembly_unit → finished_product_a
-                    ↓
-Process B → finished_product_a (product, final assembly/packaging)
-```
-
-The C++ Simulator computes throughput per process. The Python Analytics CLI uses the BOM to compute final product capacity:
-
-```
-Final Capacity = min over all BOM entries of
-    (component_throughput / qty_required_per_product)
+│   ├── process_id, name, output_product_id
+│   └── stages[]
+│       ├── stage_id, order, name
+│       ├── eligible_work_unit_model_ids[]     (required)
+│       ├── input[]                            (type + id)
+│       ├── output[]                           (type + id)
+│       └── wip_model                          (object | null)
+├── work_unit_models[]
+│   ├── model_id, name, type
+│   ├── covered_stage_ids[]                    (always array, min 1)
+│   ├── operators_per_unit, requires_operator_presence
+│   ├── footprint_m2, unit_buffer_area_m2
+│   ├── transfer_delay_sec, batch_size
+│   ├── cycle_time_default
+│   ├── integration                            (required if covered_stage_ids.length > 1)
+│   │   ├── internal_transfer_eliminated
+│   │   └── stage_weights                      ({ stage_id: float }, sum = 1.0)
+│   ├── reliability                            (optional)
+│   └── financial                              (optional)
+├── work_units[]
+│   ├── work_unit_id                           (globally unique)
+│   ├── work_unit_model_id                     (references model_id)
+│   ├── cycle_time                             (actual, may differ from model default)
+│   └── age_years
+└── calendar
+    ├── meta_data
+    ├── time_horizon
+    ├── overtime[]
+    ├── exceptions[]
+    └── demand
+        ├── target_output_qty
+        ├── planning_unit
+        └── periods[]
 ```
 
 ---
 
-## 8. Cross-Reference
+## 8. Canonical Model Invariants
+
+1. No `schema_version` field — canonical is always current
+2. No `oneOf`, `anyOf`, nullable ambiguity — all fields flat and unambiguous
+3. `covered_stage_ids[]` always an array on every WorkUnitModel — no singular `stage_id`
+4. `integration.stage_weights` always pre-materialized when `covered_stage_ids.length > 1`
+5. `meta.random_seed` always present
+6. All timestamps in UTC ISO 8601; all time durations in minutes or seconds as specified
+7. `factory.footprint_limit_m2` always present
+8. `eligible_work_unit_model_ids[]` always present on every Stage
+9. `bill_of_materials[]` only on `finished_product` — never on `semi_product` or `intermediate_product`
+10. No `planning_period` at top level — demand lives in `calendar.demand`
+11. `work_unit_id` is globally unique across all work_units
+12. Every `work_unit.work_unit_model_id` references a valid entry in `work_unit_models[]`
+13. `wip_model` is `null` on the final stage of each process; non-null on all other stages
+
+---
+
+## 9. Cross-Reference
 
 | Document | Location |
 |---|---|
-| Data Dictionary (entity definitions) | `data/documentation/DATA_DICTIONARY.md` |
+| Data Dictionary | `data/documentation/DATA_DICTIONARY.md` |
 | Canonical Model Principles | `data/documentation/CANONICAL_MODEL.md` |
-| Equipment-Centric Execution (ADR) | `docs/adr/ADR-0002-equipment-centric-execution-model.md` |
-| Adapter-Based Versioning (ADR) | `docs/adr/ADR-0003-adapter-based-versioning.md` |
-| Versioning Policy | `docs/VERSIONING_POLICY.md` |
-| Artifact Convention | `docs/ARTIFACT_CONVENTION.md` |
+| ADR-0002 Equipment-Centric | `docs/adr/ADR-0002-equipment-centric-execution-model.md` |
+| ADR-0003 Adapter Versioning | `docs/adr/ADR-0003-adapter-based-versioning.md` |
 | Canonical Example | `data/contracts/canonical_scenario.example.json` |
-| Phase 2 Output | `data/schemas/scenario.v1.schema.json` (Phase 2) |
