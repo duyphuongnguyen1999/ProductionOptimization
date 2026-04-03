@@ -1,6 +1,6 @@
 # PIDSS Artifact Convention
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Phase:** 0 — Repository Foundation & Data-Layer Conventions  
 **Status:** Active
 
@@ -60,7 +60,7 @@ artifacts/
 
 - **Written by:** Platform, immediately upon run creation.
 - **Content:** Exact copy of the public scenario payload as submitted, including `schema_version`.
-- **Purpose:** Immutable source of record. Used for audit, reproducibility, and potential re-adaptation under a future schema version.
+- **Purpose:** Immutable source of record for audit and reproducibility.
 - **Schema:** Matches `scenario.vN.schema.json` at submission time.
 
 ---
@@ -72,27 +72,50 @@ artifacts/
 
 The canonical scenario contains:
 
-- **`factory_footprint_limit_m2`** — top-level hard space constraint for the factory
-- **`layout_factor`** — top-level multiplier for production footprint computation (default 1.3)
-- **`processes[]`** — array of process definitions, each containing:
-  - `process_id`, `output` (component or product reference)
-  - `stages[]` — ordered SOP steps (`stage_id`, `order`, `name` only)
-  - `work_units[]` — execution resources, each containing:
-    - `unit_id`, `unit_type`, `covered_stage_ids[]` (always array, min 1 element)
-    - `count`, `cycle_time`, `operators_per_unit`, `requires_operator_presence`
-    - `integration.stage_weights` — **always present and pre-materialized** when `covered_stage_ids.length > 1`
-    - `reliability` (optional): `mtbf_hours`, `mttr_minutes`, `age_years`, `useful_life_years`
-    - `footprint_m2` (optional): machine floor area per unit
-    - `financial` (optional): CAPEX, OPEX, useful life for ROI
-  - `batch_size`, `transfer_delay_sec` — flow policy per stage or process
-  - `unit_buffer_area_m2` — floor area per WIP unit at stage boundaries (for WIP buffer area computation)
-- **`bom[]`** — top-level BOM definitions: `product_id`, `component_id`, `quantity_required_per_product`
-- **`shift_calendar`** — working days, shift windows, break definitions
-- **`planning_period`** — `start_time`, `end_time`, `target_output_qty`
-- **`random_seed`** — always present; assigned by adapter if not provided in public scenario
+**Top-level factory fields:**
+- `meta` — `version`, `random_seed` (always present)
+- `factory` — `footprint_limit_m2` (hard space constraint), `layout_factor`
+
+**Shift and calendar:**
+- `shifts[]` — shift definitions with breaks (`coverage_mode`: `all_stop` | `staggered`)
+- `days[]` — day type definitions with shift assignments and performance/cost multipliers
+- `calendar` — `time_horizon`, `overtime[]`, `exceptions[]`, `demand` (with `target_output_qty`, `planning_unit`, `periods[]`)
+
+> **Note:** There is no `planning_period` at the top level of the canonical model. All demand information lives in `calendar.demand`.
+
+**Domain entities:**
+- `materials[]` — raw materials and purchased components not manufactured in the factory
+- `products[]` — all products (intermediate, semi, finished), each with:
+  - `type`: `"intermediate_product"` | `"semi_product"` | `"finished_product"`
+  - `bill_of_materials[]` — **required on all product types**; each item carries `type`, `id`, and `quantity_required_per_output`
+- `processes[]` — array of process definitions, each containing:
+  - `process_id`, `output_product_id`
+  - `stages[]` — ordered SOP steps, each containing:
+    - `stage_id`, `order`, `name`
+    - `eligible_work_unit_model_ids[]` — **required**; models permitted to serve this stage
+    - `input[]`, `output[]` — with `type` and `id` per item
+    - `stage_parameters` — **required**: `defect_rate` (baseline), `rework` (`available`, `rework_rate`, `maximum_rework_cycles`)
+    - `wip_model` — WIP buffer after this stage; `null` on the last stage of each process
+
+**Equipment definitions:**
+- `work_unit_models[]` — equipment class templates, each containing:
+  - `model_id`, `name`, `type` (`manual` | `semi_auto` | `auto`)
+  - `covered_stage_ids[]` — always an array, minimum one element
+  - `operators_per_unit`, `requires_operator_presence`
+  - `footprint_m2`, `unit_buffer_area_m2`, `transfer_delay_sec`, `batch_size`
+  - `cycle_time_default`
+  - `integration.stage_weights` — **always present and pre-materialized** when `covered_stage_ids.length > 1`
+  - `reliability` (optional): `mtbf_hours`, `mttr_minutes`, `useful_life_years`, `degradation_model`
+  - `financial` (optional): `capex_usd`, `opex_usd_per_year`, `useful_life_years`
+- `work_units[]` — physical machine instances, each containing:
+  - `work_unit_id` — globally unique
+  - `work_unit_model_id` — references a `model_id` in `work_unit_models[]`
+  - `cycle_time` — actual cycle time (may differ from model default due to age/wear)
+  - `age_years`
+  - `work_unit_parameters` — **required**: `defect_rate` (per-machine observed, overrides stage baseline), `operating_rate` (OEE Performance component)
 
 - **Purpose:** Stable input consumed by both C++ Simulator and Python Analytics.
-- **Critical rule:** Domain execution data (process structure, BOM, WorkUnit definitions, stage weights) exists **only** in this file and `scenario_snapshot.json`. It is **not** stored in the relational database.
+- **Critical rule:** Domain execution data (process structure, product definitions, BOM, WorkUnitModel definitions, WorkUnit instances, stage weights, stage parameters, work unit parameters) exists **only** in this file and `scenario_snapshot.json`. It is **not** stored in the relational database.
 
 ---
 
@@ -102,7 +125,7 @@ The canonical scenario contains:
 - **Content:** Aggregate simulation summary. Must include all of the following field groups:
 
 **Throughput & Flow:**
-- `throughput` — completed units per hour (process level and total)
+- `throughput` — good units completed per hour (quality-adjusted, after defect)
 - `lead_time_estimate` — estimated flow time via Little's Law (`total_wip / throughput`)
 - `total_wip` — aggregate WIP across all stage boundaries
 - `wip_per_stage` — map of `{ stage_id: float }` — average WIP at each stage boundary
@@ -112,13 +135,19 @@ The canonical scenario contains:
 - `blocking_time` — map of `{ stage_id: float }` — cumulative time blocked per stage (seconds)
 - `starvation_time` — map of `{ stage_id: float }` — cumulative time starved per stage (seconds)
 
+**Quality:**
+- `defect_units_per_stage` — map of `{ stage_id: float }` — defective units generated per stage
+- `rework_units_per_stage` — map of `{ stage_id: float }` — units sent to rework per stage
+- `scrap_units_per_stage` — map of `{ stage_id: float }` — units scrapped (defect − rework) per stage
+
 **Footprint:**
-- `machine_area_m2` — total floor area of all WorkUnits: `Σ(count × footprint_m2)`
+- `machine_area_m2` — total floor area of all WorkUnit instances: `Σ(count × footprint_m2)`
 - `wip_area_m2` — total floor area of WIP buffers: `Σ(wip_per_stage × unit_buffer_area_m2)`
 - `production_footprint_m2` — `(machine_area_m2 + wip_area_m2) × layout_factor`
 
-**Reliability:**
-- `effective_availability` — map of `{ unit_id: float }` — computed from MTBF/MTTR where reliability data is present
+**Reliability & OEE:**
+- `effective_availability` — map of `{ unit_id: float }` — from MTBF/MTTR where present
+- `effective_oee` — map of `{ unit_id: float }` — `availability × operating_rate × (1 − defect_rate)`
 
 - **Schema:** `data/schemas/simulation_result.v1.schema.json` (defined in Phase 2)
 
@@ -127,7 +156,8 @@ The canonical scenario contains:
 ### `production_records.csv`
 
 - **Written by:** C++ Simulator CLI.
-- **Content:** Per-stage, per-period records. Columns include stage_id, period, units_produced (attributed via stage_weights for integrated WorkUnits), utilization, blocking_time, starvation_time, wip_at_boundary.
+- **Content:** Per-stage, per-period records. Columns include `stage_id`, `period`, `good_units_produced`, `defect_units`, `rework_units`, `scrap_units`, `utilization`, `blocking_time`, `starvation_time`, `wip_at_boundary`.
+- Stage output attributed via pre-materialized `stage_weights` for integrated WorkUnits.
 - **Schema:** `data/schemas/production_records.v1.schema.json` (defined in Phase 2)
 
 ---
@@ -138,31 +168,31 @@ The canonical scenario contains:
 - **Content:** Full KPI and diagnostic analysis. Must include all of the following field groups:
 
 **Core KPIs:**
-- `throughput` — validated and normalized from simulation output
+- `throughput` — quality-adjusted good units per hour
 - `lead_time_estimate` — from simulation; validated against Little's Law
 - `total_wip`, `wip_per_stage`
 - `bottleneck_stage` — stage_id with highest utilization / longest blocking time
 - `capacity_utilization` — actual vs max theoretical throughput
 - `operator_utilization` — per stage or process
 
+**Quality KPIs:**
+- `defect_rate_per_stage` — effective defect rate per stage (from simulation)
+- `rework_rate_per_stage` — fraction of defects reworked per stage
+- `scrap_rate_per_stage` — fraction of defects scrapped per stage
+- `oee_per_unit` — OEE breakdown (availability, performance, quality) per work unit
+
 **Footprint KPIs:**
-- `machine_area_m2`, `wip_area_m2`, `production_footprint_m2` — passed through from simulation
+- `machine_area_m2`, `wip_area_m2`, `production_footprint_m2`
 - `throughput_per_m2` — `throughput / production_footprint_m2`
-- `wip_ratio` — `total_wip / baseline_wip` (baseline from reference run or planning target)
-- `footprint_constraint_status` — `within_limit` or `violation` based on `factory_footprint_limit_m2`
+- `wip_ratio` — `total_wip / baseline_wip`
+- `footprint_constraint_status` — `within_limit` or `violation`
 
 **Failure Mode Detection:**
-- `failure_modes[]` — array of detected failure mode objects, each containing:
-  - `code` — FM-01 through FM-10
-  - `name` — human-readable failure mode name
-  - `severity` — `low`, `medium`, `high`, `critical`
-  - `affected_stages[]` — stage_ids implicated
-  - `detection_evidence` — key metric values that triggered detection
-  - `description` — narrative explanation
+- `failure_modes[]` — FM-01 through FM-10
 
 **WIP Stability:**
 - `wip_stability` — `stable`, `accumulating`, or `unstable`
-- `wip_growth_rate` — units per hour (positive = accumulating)
+- `wip_growth_rate` — units per hour
 
 - **Schema:** `data/schemas/analysis_response.v1.schema.json` (defined in Phase 2)
 
@@ -171,17 +201,11 @@ The canonical scenario contains:
 ### `recommendation.json`
 
 - **Written by:** Python Analytics CLI.
-- **Content:** Ranked recommendations with quantified impact. Must include:
-
-- `recommendations[]` — ranked array, each containing:
-  - `rank` — integer priority
-  - `type` — e.g., `increase_capacity`, `reduce_batch_size`, `add_redundancy`, `replace_equipment`, `rebalance_labor`, `postpone_investment`
-  - `target_stage_ids[]` — affected stages
-  - `rationale` — explanation referencing specific failure modes or KPI gaps
-  - `linked_failure_modes[]` — FM codes this recommendation addresses
-  - `estimated_impact` — quantified: throughput_delta, footprint_delta, roi_percent, payback_years
+- **Content:** Ranked recommendations with quantified impact:
+  - `rank`, `type`, `target_stage_ids[]`, `rationale`
+  - `linked_failure_modes[]`
+  - `estimated_impact` — `throughput_delta`, `footprint_delta`, `roi_percent`, `payback_years`
   - `confidence` — `rule_based` (Phase 6) or `ml_model` (Phase 9)
-
 - **Schema:** `data/schemas/recommendation.v1.schema.json` (defined in Phase 2)
 
 ---
@@ -203,71 +227,42 @@ The canonical scenario contains:
     {
       "type": "scenario_snapshot",
       "filename": "scenario_snapshot.json",
-      "path": "artifacts/a3f2b1c4-7e8d-4f9a-b012-3456789abcde/scenario_snapshot.json",
+      "path": "artifacts/a3f2b1c4-.../scenario_snapshot.json",
       "size_bytes": 4096,
-      "sha256": "e3b0c44298fc1c149afb...",
+      "sha256": "e3b0c44298fc1c...",
       "written_at": "2025-01-15T08:30:01Z"
-    },
-    {
-      "type": "canonical_scenario",
-      "filename": "canonical_scenario.json",
-      "path": "artifacts/a3f2b1c4-7e8d-4f9a-b012-3456789abcde/canonical_scenario.json",
-      "size_bytes": 8192,
-      "sha256": "a4c1d2e3f4b5...",
-      "written_at": "2025-01-15T08:30:02Z"
     }
   ]
 }
 ```
 
-**`engine_versions` is required.** Both `simulator_version` and `analytics_version` must be recorded. These are captured from the engine CLI's first stdout line at startup and stored in job metadata before being written to the manifest.
+**`engine_versions` is required.** Both `simulator_version` and `analytics_version` must be recorded.
 
 ---
 
-### `logs/platform.log`
+### Log Files
 
-- **Written by:** Platform.
-- **Content:** Structured JSON log of all pipeline steps, status transitions, adapter decisions, timing, and validation results.
-
-### `logs/simulator.log`
-
-- **Written by:** Platform (captures C++ CLI stdout + stderr).
-- **Content:** First line: engine version string (`PIDSS-Simulator X.Y.Z`). Remainder: diagnostic output.
-
-### `logs/analytics.log`
-
-- **Written by:** Platform (captures Python CLI stdout + stderr).
-- **Content:** First line: engine version string (`PIDSS-Analytics X.Y.Z`). Remainder: diagnostic output.
+- `logs/platform.log` — structured JSON; all pipeline steps, status transitions, adapter decisions
+- `logs/simulator.log` — C++ CLI stdout + stderr; first line is engine version string
+- `logs/analytics.log` — Python CLI stdout + stderr; first line is engine version string
 
 ---
 
 ## 5. Scenario Comparison Policy
 
-A/B scenario comparison compares two previously completed runs to evaluate a candidate scenario against a baseline.
-
-### Rule
-
-> **Comparison never re-invokes the simulation or analytics engines.**  
-> It reads exclusively from the stored artifacts of both runs.
+> **Comparison never re-invokes engines. It reads exclusively from stored artifacts.**
 
 ### Inputs
-
 - `baseline_run_id` — a `Completed` run
 - `candidate_run_id` — a `Completed` run
 
 ### Process
-
 1. Platform reads `analysis_response.json` and `simulation_result.json` from both run directories.
-2. Delta metrics are computed in-process (Platform or Analytics CLI in comparison mode):
-   - `throughput_delta`, `lead_time_delta`, `wip_delta`
-   - `footprint_delta`, `throughput_per_m2_delta`
-   - `roi_delta`, `payback_delta`
-3. Failure modes from both runs are compared to identify newly introduced or resolved failure modes.
-4. Stage IDs are used as the stable comparison anchor — they are consistent across all scenarios.
+2. Delta metrics computed in-process: `throughput_delta`, `lead_time_delta`, `wip_delta`, `footprint_delta`, `throughput_per_m2_delta`, `roi_delta`, `payback_delta`, `quality_delta`.
+3. Failure modes compared: `newly_detected[]`, `resolved[]`.
+4. Stage IDs are the stable comparison anchor across all scenarios.
 
-### Artifact Requirement
-
-Both runs must have status `Completed` and all required artifacts present before comparison can proceed. If either run is `Failed` or artifacts are missing, comparison is rejected.
+Both runs must be `Completed` with all required artifacts present.
 
 ---
 
@@ -275,7 +270,6 @@ Both runs must have status `Completed` and all required artifacts present before
 
 - **Format:** UUID v4
 - **Generated by:** Platform at run creation
-- **Used as:** directory name, database primary key, artifact reference
 - **Never reused** across runs including failed runs and retries
 
 ---
@@ -286,16 +280,22 @@ Both runs must have status `Completed` and all required artifacts present before
 |---|---|---|
 | Run lifecycle status, timestamps | Database | Queryable metadata |
 | Job status, engine version, timing | Database | Queryable metadata |
-| KPI summary values | Database (`run_metrics`) | Fast querying and comparison |
+| KPI summary values | Database (`run_metrics`) | Fast querying |
 | Recommendation summary | Database (`run_recommendations`) | Fast querying |
 | Artifact paths and checksums | Database (`run_artifacts`) | Artifact discovery |
-| Process structure, stages, WorkUnits | `canonical_scenario.json` only | Domain execution data — not duplicated in DB |
-| BOM definitions | `canonical_scenario.json` only | Domain execution data — not duplicated in DB |
-| Stage weights | `canonical_scenario.json` only | Computed artifact — not duplicated in DB |
-| WIP per stage, blocking, starvation | `simulation_result.json` only | Simulation artifact is source of truth |
-| Footprint metrics | `simulation_result.json` only | Simulation artifact is source of truth |
-| Failure mode detections | `analysis_response.json` only | Analytics artifact is source of truth |
-| Full recommendations | `recommendation.json` only | Analytics artifact is source of truth |
+| Process structure, stages | `canonical_scenario.json` only | Domain data |
+| Product definitions and BOM | `canonical_scenario.json` only | Domain data |
+| WorkUnitModel definitions | `canonical_scenario.json` only | Domain data |
+| WorkUnit instances and parameters | `canonical_scenario.json` only | Domain data |
+| Stage weights | `canonical_scenario.json` only | Computed artifact |
+| Stage parameters (defect, rework) | `canonical_scenario.json` only | Domain data |
+| Work unit parameters (defect, operating_rate) | `canonical_scenario.json` only | Domain data |
+| WIP per stage, blocking, starvation | `simulation_result.json` only | Simulation artifact |
+| Quality metrics (defect, rework, scrap) | `simulation_result.json` only | Simulation artifact |
+| OEE per unit | `simulation_result.json` only | Simulation artifact |
+| Footprint metrics | `simulation_result.json` only | Simulation artifact |
+| Failure mode detections | `analysis_response.json` only | Analytics artifact |
+| Full recommendations | `recommendation.json` only | Analytics artifact |
 
 ---
 
