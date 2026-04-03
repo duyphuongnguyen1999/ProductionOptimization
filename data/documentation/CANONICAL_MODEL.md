@@ -1,9 +1,8 @@
 # PIDSS Canonical Model Documentation
 
 **Version:** 1.0.0  
-**Phase:** 0 — Repository Foundation (Structure + Design Principles)  
-**Full Definition:** Phase 1 — Domain & Canonical Model  
-**Status:** Active Placeholder
+**Phase:** 1 — Domain & Canonical Model  
+**Status:** Active
 
 ---
 
@@ -13,117 +12,137 @@ This document defines the design principles governing the canonical scenario mod
 
 The canonical model is produced by the Platform adapter layer from the public scenario payload. It is **never versioned**, **never contains public-schema branching logic**, and **always contains pre-materialized computed fields**.
 
-Full structural definition (field names, types, nesting, JSON examples) is produced in Phase 1.
-
 ---
 
 ## What the Canonical Model Covers
 
 The canonical scenario is a complete, unambiguous, self-contained execution specification:
 
-- **Factory-level constraints** — `factory_footprint_limit_m2`, `layout_factor`
-- **Multi-process structure** — `processes[]` array, each with stages, work units, and output definition
-- **Component and Product definitions** — what each process produces
-- **BOM** — top-level `bom[]` linking components to final products with required quantities
-- **Stage definitions** — per process: `stage_id`, `order`, `name` only (no execution fields)
-- **WorkUnit definitions** — per process: full execution parameters including `covered_stage_ids[]`
-- **Stage weights** — pre-materialized `integration.stage_weights` for all multi-stage WorkUnits
-- **Flow policy** — `batch_size`, `transfer_delay_sec`, `unit_buffer_area_m2` per stage or process
-- **Shift and break calendar** — working days, shift times, break windows
-- **Planning demand** — `target_output_qty`, `planning_period`
-- **Reliability data** — per WorkUnit (MTBF, MTTR, age, useful life) where provided
-- **Financial data** — per WorkUnit (CAPEX, OPEX, useful life) where provided
-- **Random seed** — always present
+- **Factory-level constraints** — `factory.footprint_limit_m2`, `factory.layout_factor`
+- **Shift and break calendar** — `shifts[]`, `days[]`
+- **Materials** — `materials[]` — all non-manufactured inputs
+- **Product definitions** — `products[]` — all intermediate, semi, and finished products with their BOM
+- **Multi-process structure** — `processes[]` array, each with stages, stage_parameters, wip_models
+- **WorkUnitModel definitions** — `work_unit_models[]` — equipment class templates
+- **WorkUnit instances** — `work_units[]` — physical machines with per-machine quality and performance
+- **Reliability data** — per WorkUnitModel (MTBF, MTTR, age, useful life)
+- **Stage parameters** — per Stage: `defect_rate` (baseline), `rework` (available, rate, max cycles)
+- **Work unit parameters** — per WorkUnit instance: `defect_rate` (override), `operating_rate`
+- **Financial data** — per WorkUnitModel (CAPEX, OPEX, useful life)
+- **Demand** — in `calendar.demand` with per-period targets
+- **Random seed** — always present in `meta`
 
 ---
 
 ## Finalized Design Principles
 
-The following 15 principles are **finalized in Phase 0** and govern the Phase 1 canonical model definition.
-
 ### Principle 1 — No Schema Version Field
 
-The canonical model contains no `schema_version` field. It is always the current, stable format. Version handling is exclusively the adapter's responsibility.
+The canonical model contains no `schema_version` field. It is always the current, stable format.
 
 ### Principle 2 — No OneOf / AnyOf / Nullable Ambiguity
 
-All fields use flat, unambiguous structures. No conditional schemas, no nullable union types. Optional fields have explicit defaults applied by the adapter before serialization.
+All fields use flat, unambiguous structures. Optional fields have explicit defaults applied by the adapter.
 
 ### Principle 3 — `covered_stage_ids` is Always an Array
 
-WorkUnits link to stages exclusively via `covered_stage_ids[]`. Always present, always an array, minimum one element. No `stage_id` singular field on WorkUnit exists anywhere in the canonical model.
+WorkUnitModels link to stages exclusively via `covered_stage_ids[]`. Always an array, minimum one element. No `stage_id` singular field exists.
 
 ### Principle 4 — Integration is Structural, Not a Type
 
-A WorkUnit with `covered_stage_ids.length > 1` is integrated. No integration type flag. `unit_type` (`manual`, `semi_auto`, `auto`) is orthogonal to integration scope.
+A WorkUnitModel with `covered_stage_ids.length > 1` is integrated. No integration type flag.
 
 ### Principle 5 — Stage Weights Always Materialized
 
-When `covered_stage_ids.length > 1`, the canonical WorkUnit **always** contains a pre-computed `integration.stage_weights` map. Engines never compute attribution. The adapter computes, validates (sum = 1.0), and embeds weights before writing `canonical_scenario.json`.
+When `covered_stage_ids.length > 1`, the canonical WorkUnitModel **always** contains pre-computed `integration.stage_weights`. Engines never compute attribution.
 
-### Principle 6 — Multi-Process Structure at Top Level
+### Principle 6 — BOM is Embedded in Product Definitions
 
-The canonical model contains a top-level `processes[]` array. Each process entry contains its own `stages[]`, `work_units[]`, and `output` definition. BOM appears as a separate top-level `bom[]` array.
+`bill_of_materials[]` is embedded within each product object in `products[]`. It is **not** a separate top-level array. All three product types — `intermediate_product`, `semi_product`, and `finished_product` — carry a `bill_of_materials[]` with `quantity_required_per_output` on every item.
+
+This enables the simulator to:
+- Compute accurate material consumption accounting for per-stage defect rates
+- Track intermediate product flows between stages
+- Model cross-process semi-product dependencies
 
 ### Principle 7 — Domain Execution Data Not in Database
 
-BOM, process structure, stage definitions, WorkUnit definitions, and stage weights are stored **only** in `canonical_scenario.json` (and `scenario_snapshot.json`). The relational database stores run metadata, KPI summaries, and artifact index references only.
+BOM, process structure, stage definitions, WorkUnitModel definitions, stage weights, work_unit_parameters are stored **only** in `canonical_scenario.json`. The relational database stores run metadata, KPI summaries, and artifact index references only.
 
 ### Principle 8 — Materialized Timestamps and Normalized Units
 
-All time values in seconds. All timestamps UTC ISO 8601. All capacity values as integers. All transfer delays and batch sizes explicitly stated — never inferred.
+All time values in seconds. All timestamps UTC ISO 8601. Transfer delays and batch sizes explicitly stated.
 
 ### Principle 9 — Explicit Break Behavior
 
-Each WorkUnit explicitly states `requires_operator_presence` (boolean). Engines apply break impact deterministically from this field. No inference required.
+Each WorkUnitModel explicitly states `requires_operator_presence`. Engines apply break impact deterministically.
 
 ### Principle 10 — Reliability Fields are Optional but Structured
 
-When present, reliability follows a defined structure (`mtbf_hours`, `mttr_minutes`, `age_years`, `useful_life_years`, `degradation_model`). When absent, engines treat the WorkUnit as having 100% theoretical availability. Analytics marks reliability data as unavailable but still reports the WorkUnit.
+When present: `mtbf_hours`, `mttr_minutes`, `age_years`, `useful_life_years`, `degradation_model`. Models the Availability component of OEE (unplanned downtime). When absent, engines treat unit as 100% available.
 
 ### Principle 11 — Random Seed is Mandatory
 
-Every canonical scenario contains a `random_seed` integer. If the public scenario omits it, the adapter assigns one deterministically (e.g., hash-based or system-generated) and records it. This guarantees full reproducibility for every run.
+Every canonical scenario contains a `meta.random_seed` integer.
 
 ### Principle 12 — Engines are the Sole Consumers of Canonical
 
-No component other than the C++ Simulator CLI and Python Analytics CLI reads `canonical_scenario.json` for execution. The Platform reads it only for artifact management (indexing, checksum verification). The UI never reads canonical files directly.
+No component other than the C++ Simulator CLI and Python Analytics CLI reads `canonical_scenario.json` for execution.
 
-### Principle 13 — `factory_footprint_limit_m2` is a Top-Level Factory Field
+### Principle 13 — `factory.footprint_limit_m2` is a Top-Level Factory Field
 
-The hard physical floor space constraint is a factory-level field, not a process or WorkUnit field. It appears at the top level of the canonical scenario. Both the C++ Simulator (for footprint computation) and Python Analytics (for Footprint Constraint Violation detection — FM-08) consume it from this location. The adapter must include it in the canonical model even if the public scenario omits it (by applying a configurable default or requiring it as mandatory in the schema).
+Hard physical floor space constraint. Both engines consume it from `factory.footprint_limit_m2`.
 
-### Principle 14 — Flow Policy Fields Required for WIP Estimation
+### Principle 14 — Demand Lives in `calendar.demand`
 
-The canonical model must carry all fields required for the C++ Simulator to compute aggregate WIP between stages without discrete-event simulation:
+There is **no** top-level `planning_period` field. All demand information — including `target_output_qty`, `planning_unit`, and per-period targets — lives in `calendar.demand`. The calendar also carries `time_horizon`, `overtime`, and `exceptions`.
 
-- `batch_size` (per process or stage) — drives batch gating delay and WIP cycle amplitude
-- `transfer_delay_sec` (per stage boundary) — contributes to effective wait time
-- `unit_buffer_area_m2` (per stage or process) — enables WIP buffer area computation: `WIP_stage × unit_buffer_area_m2`
+### Principle 15 — WorkUnit Model/Instance Separation
 
-These fields are explicitly required in the canonical model. The adapter must supply defaults if the public scenario omits them. Engines must not infer flow policy fields from other fields.
+Equipment is modeled at two levels:
 
-### Principle 15 — Simulator Output Scope is Defined by Canonical Input
+- **WorkUnitModel** (`work_unit_models[]`): class template — automation type, covered stages, cycle time default, reliability, financial, footprint. Does not reuse across different processes.
+- **WorkUnit** (`work_units[]`): physical instance — references its model, carries actual `cycle_time`, `age_years`, and `work_unit_parameters`.
 
-The canonical model determines the complete scope of what the simulator must produce. Because the canonical model carries footprint fields (`footprint_m2` per WorkUnit, `unit_buffer_area_m2`, `layout_factor`, `factory_footprint_limit_m2`) and flow policy fields (`batch_size`, `transfer_delay_sec`), the simulator is contractually required to output:
+`work_unit_parameters` is **required** on every WorkUnit instance:
+- `defect_rate`: per-machine observed quality from MES history; overrides `stage_parameters.defect_rate`
+- `operating_rate`: OEE Performance component — fraction of time running at intended speed
 
-- `wip_per_stage`, `total_wip`
-- `blocking_time` per stage, `starvation_time` per stage
-- `lead_time_estimate` (via Little's Law)
-- `machine_area_m2`, `wip_area_m2`, `production_footprint_m2`
-- `stage_utilization` per stage
-- `effective_availability` per WorkUnit (where reliability data present)
+### Principle 16 — Stage Parameters are Required on Every Stage
 
-Analytics then consumes these outputs to detect failure modes FM-01 through FM-10, compute `throughput_per_m2`, and evaluate WIP stability.
+Every stage carries `stage_parameters`:
+- `defect_rate`: process-design baseline; used by analytics for comparison; simulator uses work_unit override if present
+- `rework`: `available`, `rework_rate`, `maximum_rework_cycles`
+
+### Principle 17 — OEE Components are Explicitly Modeled
+
+```
+OEE = Availability × Performance × Quality
+
+Availability  ← work_unit_model.reliability (unplanned downtime)
+Performance   ← work_unit.work_unit_parameters.operating_rate
+Quality       ← work_unit.work_unit_parameters.defect_rate
+```
+
+Defect rate resolution (simulator):
+```
+effective = work_unit.work_unit_parameters.defect_rate  (primary — per machine)
+         ?? stage.stage_parameters.defect_rate           (stage baseline)
+```
+
+### Principle 18 — Simulator Output Scope is Defined by Canonical Input
+
+The canonical model determines what the simulator must produce. Both defect/rework and OEE fields are present, so the simulator is contractually required to output quality-adjusted throughput, rework WIP load, and effective availability per WorkUnit.
 
 ---
 
 ## Cross-Reference
 
-- `DATA_DICTIONARY.md` — entity definitions, field semantics, failure mode definitions, footprint formulas
-- `VERSIONING_POLICY.md` — public schema versioning; canonical model has no version
-- `ARTIFACT_CONVENTION.md` — where `canonical_scenario.json` is stored; full field inventory of `simulation_result.json` and `analysis_response.json`
-- `LINEAGE_POLICY.md` — canonical model's role in the artifact lineage chain; BOM dependency
-- `ADR-0002` — why Stage/WorkUnit separation exists; `covered_stage_ids[]` as only linkage
-- `ADR-0003` — why adapter owns all computed fields including stage weights and flow policy defaults
-- Phase 1 will produce `canonical_scenario.example.json` in `data/contracts/`
+- `DOMAIN_MODEL.md` — entity definitions, field semantics, invariants
+- `DATA_DICTIONARY.md` — terminology and KPI definitions
+- `VERSIONING_POLICY.md` — public schema versioning; canonical has no version
+- `ARTIFACT_CONVENTION.md` — where `canonical_scenario.json` is stored
+- `LINEAGE_POLICY.md` — canonical model's role in artifact lineage
+- `ADR-0002` — Stage/WorkUnit separation; `covered_stage_ids[]`
+- `ADR-0003` — adapter owns all computed fields
+- `data/contracts/canonical_scenario.example.json` — full example
