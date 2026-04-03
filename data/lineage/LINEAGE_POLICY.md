@@ -1,6 +1,6 @@
 # PIDSS Lineage Policy
 
-**Version:** 1.0.0  
+**Version:** 1.1.0  
 **Phase:** 0 — Repository Foundation & Data-Layer Conventions  
 **Status:** Active
 
@@ -28,38 +28,47 @@ scenario_snapshot.json
         │  Immutable source of record (public format, includes schema_version)
         │
         │  [Platform: validated against JSON schema]
-        │  [Platform Adapter: version translation, BOM validation]
+        │  [Platform Adapter: version translation]
+        │  [Platform Adapter: BOM validation across all product types]
         │  [Platform Adapter: stage_weights computed and materialized]
         │  [Platform Adapter: multi-process normalization]
-        │  [Platform Adapter: factory_footprint_limit_m2 and layout_factor set]
+        │  [Platform Adapter: factory.footprint_limit_m2 and layout_factor set]
         │  [Platform Adapter: unit_buffer_area_m2 and flow policy defaults applied]
-        │  [Platform Adapter: transfer delay adjusted for integrated WorkUnits]
+        │  [Platform Adapter: stage_parameters defaults applied if absent]
+        │  [Platform Adapter: work_unit_parameters validated]
         │  [Platform Adapter: random_seed assigned if absent]
         ▼
 canonical_scenario.json
         │  Immutable canonical execution input
-        │  Contains: processes[], bom[], factory_footprint_limit_m2,
-        │            layout_factor, stage_weights (pre-materialized),
-        │            batch_size, transfer_delay_sec, unit_buffer_area_m2,
-        │            reliability data, financial data, random_seed
+        │  Contains:
+        │    meta (version, random_seed)
+        │    factory (footprint_limit_m2, layout_factor)
+        │    shifts[], days[]
+        │    materials[]
+        │    products[] — all types with bill_of_materials[] and quantity_required_per_output
+        │    processes[] — stages with stage_parameters (defect_rate, rework) and wip_models
+        │    work_unit_models[] — templates with reliability, financial, integration
+        │    work_units[] — instances with cycle_time, age_years, work_unit_parameters
+        │                   (defect_rate override, operating_rate)
+        │    calendar — time_horizon, overtime, exceptions, demand
         │
         ├──────────────────────────────────────────────────────────────────┐
         │  [consumed by C++ Simulator]                                     │
         ▼                                                                  │
 simulation_result.json                                                     │
-  - throughput (per stage, per process)                                    │
+  - throughput (quality-adjusted good units, per stage and total)          │
   - wip_per_stage, total_wip                                               │
   - lead_time_estimate (Little's Law)                                      │
   - blocking_time (per stage)                                              │
   - starvation_time (per stage)                                            │
   - stage_utilization (per stage)                                          │
-  - machine_area_m2                                                        │
-  - wip_area_m2                                                            │
-  - production_footprint_m2                                                │
-  - effective_availability (per WorkUnit)                                  │
+  - defect_units_per_stage, rework_units_per_stage, scrap_units_per_stage  │
+  - effective_availability (per work_unit, from MTBF/MTTR)                │
+  - effective_oee (per work_unit)                                          │
+  - machine_area_m2, wip_area_m2, production_footprint_m2                 │
 production_records.csv                                                     │
-  - per-stage, per-period records                                          │
-  - attributed via pre-materialized stage_weights                          │
+  - per-stage, per-period records including quality columns                │
+  - attributed via pre-materialized stage_weights for integrated units     │
         │                                                                  │
         └──────────────────────┬───────────────────────────────────────────┘
                                │  [consumed by Python Analytics]
@@ -69,8 +78,8 @@ production_records.csv                                                     │
                                ▼
                     analysis_response.json
                       - Core KPIs (throughput, utilization, capacity)
-                      - Footprint KPIs (throughput_per_m2, wip_ratio,
-                        footprint_constraint_status)
+                      - Quality KPIs (defect_rate, rework_rate, scrap_rate, OEE per unit)
+                      - Footprint KPIs (throughput_per_m2, wip_ratio, constraint_status)
                       - WIP stability (wip_stability, wip_growth_rate)
                       - Bottleneck stage identification
                       - Operator utilization (per stage)
@@ -96,18 +105,94 @@ production_records.csv                                                     │
 
 `canonical_scenario.json` is consumed by **both** the C++ Simulator and Python Analytics:
 
-- **C++ Simulator** reads: process structure, WorkUnit definitions, flow policy (`batch_size`, `transfer_delay_sec`, `unit_buffer_area_m2`), reliability data, footprint fields (`footprint_m2`, `layout_factor`, `factory_footprint_limit_m2`), and `random_seed`.
-- **Python Analytics** reads: BOM (to compute final product capacity constraints from upstream process throughputs), `factory_footprint_limit_m2` (for FM-08 Footprint Constraint Violation detection), and WorkUnit reliability/financial data (for ROI and replacement analysis).
+**C++ Simulator** reads:
+- Process structure, stage definitions, wip_models
+- WorkUnitModel definitions (footprint, flow policy, reliability)
+- WorkUnit instances (actual cycle_time, age_years, work_unit_parameters)
+- Stage parameters (defect_rate baseline, rework policy)
+- Work unit parameters (defect_rate override, operating_rate)
+- Calendar and demand
+
+**Python Analytics** reads:
+- Product definitions and BOM — to compute final product capacity constraints and material consumption
+- `factory.footprint_limit_m2` — for FM-08 Footprint Constraint Violation detection
+- WorkUnitModel reliability and financial data — for ROI and replacement analysis
+- Stage parameters and work_unit_parameters — for quality analysis and OEE comparison
 
 Analytics cannot run without `canonical_scenario.json` — simulator outputs alone are insufficient.
 
-### 3.2 Footprint KPI Flow
+### 3.2 BOM → Capacity and Material Consumption
 
-Footprint metrics originate in the C++ Simulator and flow through to Analytics:
+BOM-based computation is an Analytics responsibility. All product types carry BOM:
+
+```
+canonical_scenario.json (products[].bill_of_materials[])
+        +
+simulation_result.json (throughput per stage, defect_units_per_stage)
+        │
+        ▼ Python Analytics computes:
+  For intermediate_product:
+    material_consumption = throughput × quantity_required_per_output / (1 - defect_rate)
+
+  For semi_product:
+    semi_capacity = min(stage_throughputs along the process)
+    cross_process_dependency resolved via BOM semi_product references
+
+  For finished_product:
+    final_capacity = min over BOM semi_product entries of
+        (semi_product_throughput / quantity_required_per_output)
+    binding_upstream_constraint identified
+        │
+        ▼ reported in:
+analysis_response.json (binding_component, cross_process_bottleneck_stage,
+                        material_consumption_per_unit)
+```
+
+### 3.3 Quality Flow
+
+Quality metrics originate from canonical inputs and flow through simulation:
 
 ```
 canonical_scenario.json
-  (footprint_m2 per WorkUnit, unit_buffer_area_m2, layout_factor)
+  (stage_parameters.defect_rate — baseline)
+  (work_unit.work_unit_parameters.defect_rate — per-machine override)
+  (stage_parameters.rework — available, rate, max_cycles)
+        │
+        ▼ C++ Simulator resolves effective_defect_rate per work_unit:
+          effective = work_unit.defect_rate ?? stage.defect_rate
+          computes defect_units, rework_units, scrap_units per stage
+        │
+        ▼ simulation_result.json:
+  defect_units_per_stage, rework_units_per_stage, scrap_units_per_stage
+        │
+        ▼ Python Analytics uses for:
+  quality KPIs, OEE per unit, FM detection (FM-06 Reliability Dominance)
+  material_consumption adjusted for defect
+```
+
+### 3.4 OEE Component Flow
+
+```
+canonical_scenario.json
+  work_unit_model.reliability (mtbf_hours, mttr_minutes) → Availability
+  work_unit.work_unit_parameters.operating_rate           → Performance
+  work_unit.work_unit_parameters.defect_rate              → Quality
+        │
+        ▼ C++ Simulator:
+  effective_availability = mtbf / (mtbf + mttr/60)
+  effective_oee = availability × operating_rate × (1 - defect_rate)
+        │
+        ▼ simulation_result.json: effective_availability, effective_oee per unit
+        │
+        ▼ Python Analytics:
+  OEE analysis, FM-06 detection, investment ROI recommendations
+```
+
+### 3.5 Footprint KPI Flow
+
+```
+canonical_scenario.json
+  (footprint_m2 per WorkUnitModel, unit_buffer_area_m2, layout_factor)
         │
         ▼ C++ Simulator computes:
 simulation_result.json
@@ -118,45 +203,20 @@ analysis_response.json
   (throughput_per_m2, footprint_constraint_status, footprint_delta in comparison)
 ```
 
-Analytics does **not** recompute raw footprint values — it reads them from `simulation_result.json` and derives higher-level metrics.
-
-### 3.3 WIP, Blocking, and Starvation Flow
-
-Flow model metrics originate in the C++ Simulator:
+### 3.6 WIP, Blocking, and Starvation Flow
 
 ```
 canonical_scenario.json
-  (batch_size, transfer_delay_sec, stage capacities, reliability)
+  (batch_size, transfer_delay_sec, stage capacities, reliability, wip_model per stage)
         │
         ▼ C++ Simulator computes:
 simulation_result.json
   (wip_per_stage, total_wip, blocking_time, starvation_time, lead_time_estimate)
         │
         ▼ Python Analytics uses for:
-analysis_response.json
-  (FM-01 Downstream Blocking ← blocking_time)
-  (FM-02 Upstream Starvation ← starvation_time)
-  (FM-03 Batch Size Mismatch ← batch policy from canonical + wip accumulation)
-  (FM-05 WIP Explosion ← total_wip, wip_ratio, lead_time_estimate)
-  (wip_stability, wip_growth_rate)
-```
-
-### 3.4 BOM → Final Product Capacity
-
-BOM-based capacity computation is an Analytics responsibility:
-
-```
-canonical_scenario.json (bom[])
-        +
-simulation_result.json (throughput per process/component)
-        │
-        ▼ Python Analytics computes:
-  Final product capacity = min over BOM entries of
-      (component_throughput / qty_required_per_product)
-  Binding upstream constraint (cross-process bottleneck) identified
-        │
-        ▼ reported in:
-analysis_response.json (binding_component, cross_process_bottleneck_stage)
+  FM-01 Downstream Blocking, FM-02 Upstream Starvation
+  FM-03 Batch Size Mismatch, FM-05 WIP Explosion
+  wip_stability, wip_growth_rate
 ```
 
 ---
@@ -182,34 +242,26 @@ analysis_response.json (binding_component, cross_process_bottleneck_stage)
 
 A run is **fully reproducible** if all of the following are preserved:
 
-1. `canonical_scenario.json` — exact engine input (includes pre-computed stage weights, BOM, flow policy, factory constraints, random seed)
-2. `scenario_snapshot.json` — original public input (for audit and potential re-adaptation)
-3. `random_seed` embedded in `canonical_scenario.json`
+1. `canonical_scenario.json` — exact engine input (includes pre-computed stage weights, BOM with quantities, stage parameters, work_unit_parameters, random seed)
+2. `scenario_snapshot.json` — original public input (for audit)
+3. `meta.random_seed` embedded in `canonical_scenario.json`
 4. C++ simulator binary version (tracked in `jobs.engine_version` and `artifact_manifest.json`)
 5. Python analytics CLI version (tracked in `jobs.engine_version` and `artifact_manifest.json`)
 
-> **Note:** `scenario_snapshot.json` alone is not sufficient for reproduction. Re-adapting through an updated adapter could produce a different canonical model (e.g., different default stage weights). The canonical model is the definitive reproducibility artifact.
-
 ### Engine Version Tracking
 
-Both engine CLIs emit their version string as the first stdout line at startup:
+Both engine CLIs emit their version string as the first stdout line:
 
 ```
 PIDSS-Simulator 1.0.0
 PIDSS-Analytics 1.0.0
 ```
 
-The Platform captures these strings, stores them in `jobs.engine_version`, and writes them into `artifact_manifest.json` under `engine_versions`.
-
 ---
 
 ## 6. A/B Scenario Comparison Lineage
 
-### Policy
-
-> **Scenario comparison reads exclusively from stored artifacts of both runs. It never re-invokes engines.**
-
-### Lineage
+> **Comparison reads exclusively from stored artifacts. It never re-invokes engines.**
 
 ```
 baseline run_id ──► artifacts/{baseline_run_id}/
@@ -223,27 +275,27 @@ candidate run_id ──► artifacts/{candidate_run_id}/
                       simulation_result.json
                               │
                               ▼
-                    Comparison delta metrics:
+                    Delta metrics:
                       throughput_delta, lead_time_delta, wip_delta,
                       footprint_delta, throughput_per_m2_delta,
-                      roi_delta, payback_delta
+                      roi_delta, payback_delta, quality_delta
                     Failure mode diff:
                       newly_detected[], resolved[]
 ```
 
-Stage IDs are the stable comparison anchor — they are consistent across all scenarios, enabling per-stage delta computation.
+Stage IDs are the stable comparison anchor across all scenarios.
 
 ---
 
 ## 7. Artifact Integrity
 
-Each artifact in `artifact_manifest.json` includes a SHA-256 checksum computed at write time. The Platform can verify artifact integrity on demand by recomputing checksums and comparing against the manifest. Any mismatch indicates a violation of the append-only policy.
+Each artifact in `artifact_manifest.json` includes a SHA-256 checksum computed at write time.
 
 ---
 
 ## 8. What Lineage Does NOT Cover
 
-- **Observed data import** (Phase 10) — lineage for observed CSV imports defined separately
-- **ML model training lineage** (Phase 9) — model versioning and training run lineage defined separately
-- **UI session or user action history** — out of scope
-- **Per-unit product routing or WIP traceability** — PIDSS models production in aggregate only; no serial/lot lineage
+- **Observed data import** (Phase 10)
+- **ML model training lineage** (Phase 9)
+- **UI session or user action history**
+- **Per-unit product routing or WIP traceability** — PIDSS models production in aggregate only
