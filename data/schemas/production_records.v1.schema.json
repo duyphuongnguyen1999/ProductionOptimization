@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pidss/schemas/production_records.v1.schema.json",
+  "title": "PIDSS Production Records Schema",
+  "description": "Schema descriptor for production_records.csv — the per-stage, per-period production log written by the C++ Simulator CLI. This JSON document defines the expected CSV column structure, types, and constraints. The CSV itself uses the columns listed below with a header row.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "format", "columns"],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "format": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "delimiter", "has_header", "encoding"],
+      "properties": {
+        "type": { "type": "string", "enum": ["csv"] },
+        "delimiter": { "type": "string", "enum": [","] },
+        "has_header": { "type": "boolean", "enum": [true] },
+        "encoding": { "type": "string", "enum": ["utf-8"] }
+      }
+    },
+    "columns": {
+      "type": "array",
+      "description": "Ordered list of CSV columns. All columns are required. Column order in the CSV must match this list.",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/ColumnDescriptor" }
+    }
+  },
+  "definitions": {
+    "ColumnDescriptor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "type", "nullable", "description"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["string", "integer", "float", "datetime", "date"] },
+        "nullable": { "type": "boolean" },
+        "description": { "type": "string" },
+        "minimum": { "type": "number" },
+        "maximum": { "type": "number" }
+      }
+    }
+  },
+  "columns": [
+    {
+      "name": "run_id",
+      "type": "string",
+      "nullable": false,
+      "description": "UUID v4 of the run that produced this record."
+    },
+    {
+      "name": "period_id",
+      "type": "string",
+      "nullable": false,
+      "description": "Period identifier from calendar.demand.periods[].period_id."
+    },
+    {
+      "name": "date",
+      "type": "date",
+      "nullable": false,
+      "description": "ISO 8601 date for this period (YYYY-MM-DD)."
+    },
+    {
+      "name": "shift_id",
+      "type": "string",
+      "nullable": false,
+      "description": "Shift identifier for this period."
+    },
+    {
+      "name": "stage_id",
+      "type": "string",
+      "nullable": false,
+      "description": "Stage identifier. For integrated WorkUnits, records are attributed per stage using pre-materialized stage_weights."
+    },
+    {
+      "name": "work_unit_model_id",
+      "type": "string",
+      "nullable": false,
+      "description": "WorkUnitModel that served this stage in this period."
+    },
+    {
+      "name": "good_units_produced",
+      "type": "float",
+      "nullable": false,
+      "description": "Quality-adjusted good units produced at this stage in this period (after defect deduction).",
+      "minimum": 0
+    },
+    {
+      "name": "defect_units",
+      "type": "float",
+      "nullable": false,
+      "description": "Total defective units generated at this stage in this period.",
+      "minimum": 0
+    },
+    {
+      "name": "rework_units",
+      "type": "float",
+      "nullable": false,
+      "description": "Units sent to rework at this stage in this period.",
+      "minimum": 0
+    },
+    {
+      "name": "scrap_units",
+      "type": "float",
+      "nullable": false,
+      "description": "Units scrapped (defect minus rework) at this stage in this period.",
+      "minimum": 0
+    },
+    {
+      "name": "utilization",
+      "type": "float",
+      "nullable": false,
+      "description": "Stage utilization fraction in this period (0.0–1.0).",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    {
+      "name": "blocking_time_sec",
+      "type": "float",
+      "nullable": false,
+      "description": "Cumulative blocking time in seconds for this stage in this period.",
+      "minimum": 0
+    },
+    {
+      "name": "starvation_time_sec",
+      "type": "float",
+      "nullable": false,
+      "description": "Cumulative starvation time in seconds for this stage in this period.",
+      "minimum": 0
+    },
+    {
+      "name": "wip_at_boundary",
+      "type": "float",
+      "nullable": false,
+      "description": "Average WIP units at this stage's output boundary at end of period.",
+      "minimum": 0
+    },
+    {
+      "name": "effective_availability",
+      "type": "float",
+      "nullable": false,
+      "description": "Effective availability of the serving WorkUnit in this period (from MTBF/MTTR). 1.0 if no reliability data.",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    {
+      "name": "effective_oee",
+      "type": "float",
+      "nullable": false,
+      "description": "Effective OEE of the serving WorkUnit in this period.",
+      "minimum": 0.0,
+      "maximum": 1.0
+    }
+  ]
+}

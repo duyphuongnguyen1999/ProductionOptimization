@@ -116,6 +116,12 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
-# Environment files
+# ============== Environment files =====================
 .env
 .env.*
+
+
+# ============== Others =====================
+*_VI.md
+.drawio/
+

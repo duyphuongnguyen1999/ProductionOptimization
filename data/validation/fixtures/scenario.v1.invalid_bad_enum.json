@@ -1,0 +1,22 @@
+{
+  "_comment": "NEGATIVE fixture — schema_version value '2.0' is not in the allowed enum ['1.0']. Must be rejected.",
+  "schema_version": "2.0",
+  "scenario_name": "Invalid — Bad schema_version Enum",
+  "factory": { "footprint_limit_m2": 1000.0, "layout_factor": 1.3 },
+  "shifts": [{ "shift_id": "A", "name": "Day", "start_minute_of_day": 360, "duration_minutes": 480, "net_labor_minutes": 415, "performance_factor": 1.0, "breaks": [] }],
+  "days": [
+    { "day_id": "weekday", "name": "Weekday", "shift_ids": ["A"], "day_performance_factor": 1.0, "labor_cost_factor": 1.0, "min_coverage_ratio": 0.7, "max_coverage_ratio": 1.0 },
+    { "day_id": "weekend", "name": "Weekend", "shift_ids": [], "day_performance_factor": 0.0, "labor_cost_factor": 2.0, "min_coverage_ratio": 0.0, "max_coverage_ratio": 0.0 },
+    { "day_id": "holiday", "name": "Holiday", "shift_ids": [], "day_performance_factor": 0.0, "labor_cost_factor": 4.0, "min_coverage_ratio": 0.0, "max_coverage_ratio": 0.0 },
+    { "day_id": "special", "name": "Special", "shift_ids": [], "day_performance_factor": 0.0, "labor_cost_factor": 2.0, "min_coverage_ratio": 0.0, "max_coverage_ratio": 0.0 }
+  ],
+  "materials": [{ "material_id": "mat_x", "name": "X" }],
+  "products": [
+    { "product_id": "sp_1", "name": "Semi 1", "type": "semi_product", "bill_of_materials": [{ "type": "material", "id": "mat_x", "quantity_required_per_output": 1 }] },
+    { "product_id": "fp_1", "name": "Finished 1", "type": "finished_product", "bill_of_materials": [{ "type": "semi_product", "id": "sp_1", "quantity_required_per_output": 1 }] }
+  ],
+  "processes": [{ "process_id": "p1", "name": "P1", "output_product_id": "sp_1", "stages": [{ "stage_id": "s1", "order": 1, "name": "S1", "eligible_work_unit_model_ids": ["m1"], "input": [{ "type": "material", "id": "mat_x" }], "output": [{ "type": "semi_product", "id": "sp_1" }], "stage_parameters": { "defect_rate": 0.01, "rework": { "available": false, "rework_rate": 0.0, "maximum_rework_cycles": 0 } }, "wip_model": null }] }],
+  "work_unit_models": [{ "model_id": "m1", "name": "M1", "type": "manual", "covered_stage_ids": ["s1"], "operators_per_unit": 1, "requires_operator_presence": true, "footprint_m2": 3.0, "unit_buffer_area_m2": 0.02, "transfer_delay_sec": 60, "batch_size": 100, "cycle_time_default": { "mean_sec": 10.0 } }],
+  "work_units": [{ "work_unit_id": "wu_1", "work_unit_model_id": "m1", "cycle_time": { "mean_sec": 10.0 }, "age_years": 1, "work_unit_parameters": { "defect_rate": 0.01, "operating_rate": 0.90 } }],
+  "calendar": { "meta_data": { "timezone": "UTC", "aggregation_interval_minutes": 5 }, "time_horizon": { "start_time": "2026-01-01T06:00:00Z", "end_time": "2026-01-02T06:00:00Z" }, "demand": { "target_output_qty": 1000, "planning_unit": "shift", "periods": [{ "period_id": "P1", "date": "2026-01-01", "shift_id": "A", "target_qty": 1000 }] } }
+}

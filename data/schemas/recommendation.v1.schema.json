@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pidss/schemas/recommendation.v1.schema.json",
+  "title": "PIDSS Recommendation Schema",
+  "description": "Output schema for the Python Analytics CLI (Pidss.Analytics). Written to artifacts/{run_id}/recommendation.json. Contains ranked, explainable recommendations with quantified ROI, payback, and linked failure modes.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "analytics_version",
+    "generated_at",
+    "recommendations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "analytics_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "recommendations": {
+      "type": "array",
+      "description": "Ranked list of recommendations. Index 0 is highest priority. May be empty if no actionable recommendations.",
+      "items": { "$ref": "#/definitions/Recommendation" }
+    }
+  },
+  "definitions": {
+    "Recommendation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rank",
+        "type",
+        "target_stage_ids",
+        "rationale",
+        "linked_failure_modes",
+        "estimated_impact",
+        "confidence"
+      ],
+      "properties": {
+        "rank": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Priority rank. 1 = highest priority."
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "increase_downstream_capacity",
+            "reduce_batch_size",
+            "add_intermediate_buffer",
+            "increase_upstream_capacity",
+            "redesign_feeding_logic",
+            "harmonize_batch_sizes",
+            "reinforce_bottleneck_stage",
+            "multi_stage_automation",
+            "rebalance_stage_capacity",
+            "add_redundancy",
+            "preventive_maintenance",
+            "hybrid_manual_fallback",
+            "parallel_automation_cells",
+            "maintain_legacy_backup",
+            "retire_legacy_machines",
+            "replace_integrated_cell",
+            "reallocate_operators",
+            "cross_skill_training",
+            "postpone_investment",
+            "phased_deployment",
+            "smaller_automation_cell",
+            "improve_reliability",
+            "other"
+          ],
+          "description": "Recommendation action category."
+        },
+        "target_stage_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "stage_ids to which this recommendation applies. May be empty for factory-level recommendations."
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable explanation of why this recommendation was generated, referencing detected failure modes and KPI evidence."
+        },
+        "linked_failure_modes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["FM-01", "FM-02", "FM-03", "FM-04", "FM-05", "FM-06", "FM-07", "FM-08", "FM-09", "FM-10"]
+          },
+          "description": "Failure mode codes that triggered or are addressed by this recommendation."
+        },
+        "estimated_impact": {
+          "$ref": "#/definitions/EstimatedImpact"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": ["rule_based", "ml_model"],
+          "description": "rule_based in Phase 6. ml_model in Phase 9 after ML decision intelligence is introduced."
+        }
+      }
+    },
+    "EstimatedImpact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [],
+      "description": "Quantified impact estimates for this recommendation. All fields are optional — not all recommendations have full financial projections.",
+      "properties": {
+        "throughput_delta": {
+          "type": "number",
+          "description": "Expected throughput change in units/hr. Positive = improvement."
+        },
+        "throughput_delta_percent": {
+          "type": "number",
+          "description": "Throughput delta as a percentage of baseline throughput."
+        },
+        "lead_time_delta": {
+          "type": "number",
+          "description": "Expected lead time change in hours. Negative = improvement."
+        },
+        "footprint_delta": {
+          "type": "number",
+          "description": "Expected footprint change in m2. Negative = reduction."
+        },
+        "capex_usd": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated capital expenditure required to implement this recommendation."
+        },
+        "opex_delta_usd_per_year": {
+          "type": "number",
+          "description": "Expected change in annual operational cost. Negative = cost reduction."
+        },
+        "roi_percent": {
+          "type": "number",
+          "description": "Estimated ROI: (Net_Gain - CAPEX) / CAPEX × 100%."
+        },
+        "payback_years": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Estimated payback period in years."
+        },
+        "reliability_improvement": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Expected improvement in effective_availability if recommendation involves reliability upgrade."
+        }
+      }
+    }
+  }
+}

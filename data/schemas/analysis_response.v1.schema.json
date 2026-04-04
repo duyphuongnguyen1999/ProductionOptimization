@@ -1,0 +1,275 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pidss/schemas/analysis_response.v1.schema.json",
+  "title": "PIDSS Analysis Response Schema",
+  "description": "Output schema for the Python Analytics CLI (Pidss.Analytics). Written to artifacts/{run_id}/analysis_response.json. Contains KPIs, quality metrics, footprint metrics, bottleneck identification, failure mode detections (FM-01 through FM-10), and operator utilization.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "analytics_version",
+    "generated_at",
+    "throughput",
+    "lead_time_estimate",
+    "total_wip",
+    "wip_per_stage",
+    "bottleneck_stage",
+    "capacity_utilization",
+    "operator_utilization",
+    "defect_rate_per_stage",
+    "rework_rate_per_stage",
+    "scrap_rate_per_stage",
+    "oee_per_unit",
+    "machine_area_m2",
+    "wip_area_m2",
+    "production_footprint_m2",
+    "throughput_per_m2",
+    "wip_ratio",
+    "footprint_constraint_status",
+    "wip_stability",
+    "wip_growth_rate",
+    "failure_modes"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"]
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "analytics_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PIDSS-Analytics version string (e.g., 1.0.0)."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "throughput": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quality-adjusted good units per hour. Validated against simulation_result."
+    },
+    "lead_time_estimate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Lead time estimate in hours from simulation (Little's Law: total_wip / throughput)."
+    },
+    "total_wip": {
+      "type": "number",
+      "minimum": 0
+    },
+    "wip_per_stage": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "bottleneck_stage": {
+      "type": "string",
+      "minLength": 1,
+      "description": "stage_id of the bottleneck — the stage with the highest utilization and/or longest cumulative blocking time."
+    },
+    "capacity_utilization": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Actual throughput / theoretical maximum throughput."
+    },
+    "operator_utilization": {
+      "type": "object",
+      "description": "Operator utilization per stage (0.0–1.0). Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "defect_rate_per_stage": {
+      "type": "object",
+      "description": "Effective defect rate per stage derived from simulation (defect_units / total_units_started). Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "rework_rate_per_stage": {
+      "type": "object",
+      "description": "Fraction of defective units sent to rework per stage. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "scrap_rate_per_stage": {
+      "type": "object",
+      "description": "Fraction of defective units scrapped per stage. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "oee_per_unit": {
+      "type": "object",
+      "description": "OEE decomposition per work_unit. Keys are work_unit_ids.",
+      "additionalProperties": { "$ref": "#/definitions/OeeBreakdown" },
+      "minProperties": 1
+    },
+    "machine_area_m2": {
+      "type": "number",
+      "minimum": 0
+    },
+    "wip_area_m2": {
+      "type": "number",
+      "minimum": 0
+    },
+    "production_footprint_m2": {
+      "type": "number",
+      "minimum": 0
+    },
+    "throughput_per_m2": {
+      "type": "number",
+      "minimum": 0,
+      "description": "throughput / production_footprint_m2 — space efficiency KPI."
+    },
+    "wip_ratio": {
+      "type": "number",
+      "minimum": 0,
+      "description": "total_wip / baseline_wip. For a standalone (non-comparison) run, baseline_wip = total_wip and ratio = 1.0."
+    },
+    "footprint_constraint_status": {
+      "type": "string",
+      "enum": ["within_limit", "violation"],
+      "description": "within_limit if production_footprint_m2 <= factory.footprint_limit_m2, else violation (FM-08 triggered)."
+    },
+    "wip_stability": {
+      "type": "string",
+      "enum": ["stable", "accumulating", "unstable"],
+      "description": "Assessment of WIP growth trend over the simulation period."
+    },
+    "wip_growth_rate": {
+      "type": "number",
+      "description": "Rate of WIP change in units per hour. Positive = accumulating, negative = draining, ~0 = stable."
+    },
+    "failure_modes": {
+      "type": "array",
+      "description": "Detected system-level failure modes FM-01 through FM-10. Empty array if no failure modes detected.",
+      "items": { "$ref": "#/definitions/FailureMode" }
+    },
+    "comparison": {
+      "$ref": "#/definitions/ComparisonDeltas",
+      "description": "Optional. Present only when this is a comparison analytics run (baseline vs candidate). Contains delta metrics between this run and the baseline."
+    }
+  },
+  "definitions": {
+    "OeeBreakdown": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["availability", "performance", "quality", "oee"],
+      "properties": {
+        "availability": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "OEE Availability: mtbf / (mtbf + mttr/60). 1.0 if no reliability data."
+        },
+        "performance": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "OEE Performance: work_unit.work_unit_parameters.operating_rate."
+        },
+        "quality": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "OEE Quality: 1.0 - effective_defect_rate."
+        },
+        "oee": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Composite OEE: availability × performance × quality."
+        }
+      }
+    },
+    "FailureMode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "name", "severity", "detected", "affected_stage_ids", "description", "primary_evidence"],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": ["FM-01", "FM-02", "FM-03", "FM-04", "FM-05", "FM-06", "FM-07", "FM-08", "FM-09", "FM-10"],
+          "description": "PIDSS failure mode code."
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable failure mode name."
+        },
+        "severity": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "critical"],
+          "description": "Assessed severity of this failure mode instance."
+        },
+        "detected": {
+          "type": "boolean",
+          "description": "true if this failure mode was detected in this run."
+        },
+        "affected_stage_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "stage_ids where this failure mode was detected. May be empty if factory-wide (e.g., FM-08)."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Human-readable description of the detected condition."
+        },
+        "primary_evidence": {
+          "type": "object",
+          "description": "Key metric values that triggered detection. Structure varies by failure mode code. Empty object is allowed when detected=false.",
+          "additionalProperties": true
+        }
+      }
+    },
+    "ComparisonDeltas": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseline_run_id", "candidate_run_id"],
+      "properties": {
+        "baseline_run_id": { "type": "string", "format": "uuid" },
+        "candidate_run_id": { "type": "string", "format": "uuid" },
+        "throughput_delta": {
+          "type": "number",
+          "description": "candidate_throughput - baseline_throughput (units/hr)."
+        },
+        "lead_time_delta": {
+          "type": "number",
+          "description": "candidate_lead_time - baseline_lead_time (hours)."
+        },
+        "wip_delta": {
+          "type": "number",
+          "description": "candidate_total_wip - baseline_total_wip (units)."
+        },
+        "footprint_delta": {
+          "type": "number",
+          "description": "candidate_production_footprint_m2 - baseline_production_footprint_m2."
+        },
+        "throughput_per_m2_delta": {
+          "type": "number",
+          "description": "candidate_throughput_per_m2 - baseline_throughput_per_m2."
+        },
+        "quality_delta": {
+          "type": "number",
+          "description": "candidate_effective_scrap_rate - baseline_effective_scrap_rate."
+        },
+        "newly_detected_failure_modes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["FM-01", "FM-02", "FM-03", "FM-04", "FM-05", "FM-06", "FM-07", "FM-08", "FM-09", "FM-10"] },
+          "description": "Failure modes present in candidate but not in baseline."
+        },
+        "resolved_failure_modes": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["FM-01", "FM-02", "FM-03", "FM-04", "FM-05", "FM-06", "FM-07", "FM-08", "FM-09", "FM-10"] },
+          "description": "Failure modes present in baseline but resolved in candidate."
+        }
+      }
+    }
+  }
+}

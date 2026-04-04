@@ -1,0 +1,48 @@
+{
+  "_comment": "Example simulation_result.json for a 2-stage (pressing + welding) baseline run. Written by C++ Simulator CLI to artifacts/{run_id}/simulation_result.json.",
+  "schema_version": "1.0",
+  "run_id": "a3f2b1c4-7e8d-4f9a-b012-3456789abcde",
+  "simulator_version": "1.0.0",
+  "generated_at": "2026-01-05T08:45:00Z",
+  "throughput": 472.3,
+  "lead_time_estimate": 0.38,
+  "total_wip": 179.5,
+  "wip_per_stage": {
+    "pressing": 179.5
+  },
+  "stage_utilization": {
+    "pressing": 0.81,
+    "welding": 0.94
+  },
+  "blocking_time": {
+    "pressing": 1240.0,
+    "welding": 0.0
+  },
+  "starvation_time": {
+    "pressing": 0.0,
+    "welding": 320.5
+  },
+  "defect_units_per_stage": {
+    "pressing": 1885.0,
+    "welding": 3727.0
+  },
+  "rework_units_per_stage": {
+    "pressing": 1508.0,
+    "welding": 2609.0
+  },
+  "scrap_units_per_stage": {
+    "pressing": 377.0,
+    "welding": 1118.0
+  },
+  "effective_availability": {
+    "press_machine_01": 0.941,
+    "weld_machine_01":  0.941
+  },
+  "effective_oee": {
+    "press_machine_01": 0.819,
+    "weld_machine_01":  0.780
+  },
+  "machine_area_m2": 9.0,
+  "wip_area_m2": 3.59,
+  "production_footprint_m2": 16.4
+}

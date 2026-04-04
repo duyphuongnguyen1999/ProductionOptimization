@@ -1,0 +1,227 @@
+{
+  "_comment": "Valid fixture for scenario.v1.schema.json. Must pass validation. Identical in structure to scenario.v1.example.json with minor field variations for coverage.",
+  "schema_version": "1.0",
+  "scenario_name": "Validation Fixture — Valid Scenario",
+  "scenario_description": "Positive test fixture. All required fields present and valid.",
+  "random_seed": 99,
+  "factory": {
+    "footprint_limit_m2": 1200.0,
+    "layout_factor": 1.25
+  },
+  "shifts": [
+    {
+      "shift_id": "DAY",
+      "name": "Day Shift",
+      "start_minute_of_day": 360,
+      "duration_minutes": 480,
+      "net_labor_minutes": 420,
+      "performance_factor": 1.0,
+      "breaks": [
+        {
+          "start_minute_from_shift_start": 240,
+          "duration_minutes": 45,
+          "type": "meal",
+          "coverage_mode": "staggered",
+          "min_coverage_ratio": 0.1
+        }
+      ]
+    }
+  ],
+  "days": [
+    {
+      "day_id": "weekday",
+      "name": "Weekday",
+      "shift_ids": ["DAY"],
+      "day_performance_factor": 1.0,
+      "labor_cost_factor": 1.0,
+      "min_coverage_ratio": 0.7,
+      "max_coverage_ratio": 1.0
+    },
+    {
+      "day_id": "weekend",
+      "name": "Weekend",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 2.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    },
+    {
+      "day_id": "holiday",
+      "name": "Holiday",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 4.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    },
+    {
+      "day_id": "special",
+      "name": "Special",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 2.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    }
+  ],
+  "materials": [
+    { "material_id": "mat_a", "name": "Material A" },
+    { "material_id": "mat_b", "name": "Material B" }
+  ],
+  "products": [
+    {
+      "product_id": "ip_fixture_1",
+      "name": "Intermediate Product 1",
+      "type": "intermediate_product",
+      "bill_of_materials": [
+        { "type": "material", "id": "mat_a", "quantity_required_per_output": 1 },
+        { "type": "material", "id": "mat_b", "quantity_required_per_output": 1 }
+      ]
+    },
+    {
+      "product_id": "semi_fixture_1",
+      "name": "Semi Product 1",
+      "type": "semi_product",
+      "bill_of_materials": [
+        { "type": "intermediate_product", "id": "ip_fixture_1", "quantity_required_per_output": 1 }
+      ]
+    },
+    {
+      "product_id": "finished_fixture_1",
+      "name": "Finished Product 1",
+      "type": "finished_product",
+      "bill_of_materials": [
+        { "type": "semi_product", "id": "semi_fixture_1", "quantity_required_per_output": 1 }
+      ]
+    }
+  ],
+  "processes": [
+    {
+      "process_id": "fixture_process",
+      "name": "Fixture Process",
+      "output_product_id": "semi_fixture_1",
+      "stages": [
+        {
+          "stage_id": "stage_alpha",
+          "order": 1,
+          "name": "Stage Alpha",
+          "eligible_work_unit_model_ids": ["model_alpha"],
+          "input": [
+            { "type": "material", "id": "mat_a" },
+            { "type": "material", "id": "mat_b" }
+          ],
+          "output": [
+            { "type": "intermediate_product", "id": "ip_fixture_1" }
+          ],
+          "stage_parameters": {
+            "defect_rate": 0.01,
+            "rework": {
+              "available": true,
+              "rework_rate": 0.8,
+              "maximum_rework_cycles": 2
+            }
+          },
+          "wip_model": {
+            "buffer_id": "buf_alpha_to_beta",
+            "capacity_units": 600,
+            "initial_wip_units": 0,
+            "buffer_policy": { "type": "fifo" }
+          }
+        },
+        {
+          "stage_id": "stage_beta",
+          "order": 2,
+          "name": "Stage Beta",
+          "eligible_work_unit_model_ids": ["model_beta"],
+          "input": [
+            { "type": "intermediate_product", "id": "ip_fixture_1" }
+          ],
+          "output": [
+            { "type": "semi_product", "id": "semi_fixture_1" }
+          ],
+          "stage_parameters": {
+            "defect_rate": 0.005,
+            "rework": {
+              "available": false,
+              "rework_rate": 0.0,
+              "maximum_rework_cycles": 0
+            }
+          },
+          "wip_model": null
+        }
+      ]
+    }
+  ],
+  "work_unit_models": [
+    {
+      "model_id": "model_alpha",
+      "name": "Model Alpha",
+      "type": "manual",
+      "covered_stage_ids": ["stage_alpha"],
+      "operators_per_unit": 1,
+      "requires_operator_presence": true,
+      "footprint_m2": 3.0,
+      "unit_buffer_area_m2": 0.02,
+      "transfer_delay_sec": 120,
+      "batch_size": 300,
+      "cycle_time_default": { "mean_sec": 15.0, "stddev_sec": 1.0 }
+    },
+    {
+      "model_id": "model_beta",
+      "name": "Model Beta",
+      "type": "semi_auto",
+      "covered_stage_ids": ["stage_beta"],
+      "operators_per_unit": 1,
+      "requires_operator_presence": true,
+      "footprint_m2": 5.0,
+      "unit_buffer_area_m2": 0.02,
+      "transfer_delay_sec": 120,
+      "batch_size": 300,
+      "cycle_time_default": { "mean_sec": 8.0, "stddev_sec": 0.5 },
+      "reliability": {
+        "mtbf_hours": 720,
+        "mttr_minutes": 60,
+        "useful_life_years": 8
+      }
+    }
+  ],
+  "work_units": [
+    {
+      "work_unit_id": "wu_alpha_01",
+      "work_unit_model_id": "model_alpha",
+      "cycle_time": { "mean_sec": 15.0, "stddev_sec": 1.0 },
+      "age_years": 1,
+      "work_unit_parameters": { "defect_rate": 0.01, "operating_rate": 0.90 }
+    },
+    {
+      "work_unit_id": "wu_beta_01",
+      "work_unit_model_id": "model_beta",
+      "cycle_time": { "mean_sec": 8.0, "stddev_sec": 0.5 },
+      "age_years": 2,
+      "work_unit_parameters": { "defect_rate": 0.005, "operating_rate": 0.92 }
+    }
+  ],
+  "calendar": {
+    "meta_data": {
+      "timezone": "Asia/Ho_Chi_Minh",
+      "aggregation_interval_minutes": 5
+    },
+    "time_horizon": {
+      "start_time": "2026-02-01T06:00:00Z",
+      "end_time": "2026-02-02T06:00:00Z"
+    },
+    "demand": {
+      "target_output_qty": 10000,
+      "planning_unit": "shift",
+      "periods": [
+        {
+          "period_id": "SHIFT_DAY_2026-02-01",
+          "date": "2026-02-01",
+          "shift_id": "DAY",
+          "target_qty": 10000
+        }
+      ]
+    }
+  }
+}

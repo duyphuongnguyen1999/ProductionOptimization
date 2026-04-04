@@ -1,0 +1,1038 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans, system-ui); color: var(--color-text-primary); background: transparent; font-size: 13px; }
+
+.roadmap { padding: 16px 0; }
+
+.phase-row {
+  display: flex;
+  gap: 0;
+  margin-bottom: 6px;
+  align-items: stretch;
+}
+
+.phase-label {
+  width: 130px;
+  min-width: 130px;
+  padding: 8px 10px;
+  border-radius: 8px 0 0 8px;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  cursor: pointer;
+  border: 0.5px solid transparent;
+  transition: filter 0.15s;
+}
+.phase-label:hover { filter: brightness(0.93); }
+.phase-label .phase-num { font-size: 10px; font-weight: 400; opacity: 0.75; margin-bottom: 2px; }
+.phase-label .phase-title { line-height: 1.3; }
+
+.phase-body {
+  flex: 1;
+  border-radius: 0 8px 8px 0;
+  border: 0.5px solid var(--color-border-tertiary);
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.phase-summary {
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: var(--color-background-secondary);
+  user-select: none;
+}
+.phase-summary:hover { background: var(--color-background-tertiary); }
+.toggle-icon { font-size: 10px; opacity: 0.5; transition: transform 0.2s; flex-shrink: 0; }
+.phase-row.open .toggle-icon { transform: rotate(180deg); }
+
+.modules-grid {
+  display: none;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px;
+  padding: 10px;
+  background: var(--color-background-primary);
+  border-top: 0.5px solid var(--color-border-tertiary);
+}
+.phase-row.open .modules-grid { display: grid; }
+
+.module-card {
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--color-background-secondary);
+}
+
+.module-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.module-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-weight: 400;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.module-items {
+  padding: 6px 10px 8px;
+  list-style: none;
+}
+.module-items li {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  padding: 2px 0;
+  padding-left: 12px;
+  position: relative;
+  line-height: 1.45;
+}
+.module-items li::before {
+  content: '·';
+  position: absolute;
+  left: 2px;
+  color: var(--color-text-tertiary);
+  font-weight: 700;
+}
+
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 0 14px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  margin-bottom: 12px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.dep-note {
+  font-size: 10px;
+  color: var(--color-text-tertiary);
+  font-style: italic;
+  padding: 2px 10px 6px;
+}
+
+/* Color themes per phase */
+.ph0 .phase-label { background: #F1EFE8; border-color: #B4B2A9; color: #444441; }
+.ph1 .phase-label { background: #E6F1FB; border-color: #85B7EB; color: #0C447C; }
+.ph2 .phase-label { background: #EEEDFE; border-color: #AFA9EC; color: #3C3489; }
+.ph3 .phase-label { background: #EAF3DE; border-color: #97C459; color: #27500A; }
+.ph4 .phase-label { background: #FAEEDA; border-color: #EF9F27; color: #633806; }
+.ph5 .phase-label { background: #FAECE7; border-color: #F0997B; color: #712B13; }
+.ph6 .phase-label { background: #E1F5EE; border-color: #5DCAA5; color: #085041; }
+.ph7 .phase-label { background: #FBEAF0; border-color: #ED93B1; color: #72243E; }
+.ph8 .phase-label { background: #FCEBEB; border-color: #F09595; color: #791F1F; }
+.ph9 .phase-label { background: #FAEEDA; border-color: #BA7517; color: #412402; }
+.ph10 .phase-label { background: #F1EFE8; border-color: #888780; color: #2C2C2A; }
+
+.tag-data { background: #E6F1FB; color: #185FA5; }
+.tag-platform { background: #FAEEDA; color: #633806; }
+.tag-engine { background: #FAECE7; color: #712B13; }
+.tag-ui { background: #FBEAF0; color: #72243E; }
+.tag-doc { background: #F1EFE8; color: #444441; }
+.tag-db { background: #EAF3DE; color: #27500A; }
+.tag-infra { background: #EEEDFE; color: #3C3489; }
+.tag-ml { background: #FCEBEB; color: #791F1F; }
+
+@media (prefers-color-scheme: dark) {
+  .ph0 .phase-label { background: #2C2C2A; border-color: #5F5E5A; color: #D3D1C7; }
+  .ph1 .phase-label { background: #042C53; border-color: #378ADD; color: #B5D4F4; }
+  .ph2 .phase-label { background: #26215C; border-color: #7F77DD; color: #CECBF6; }
+  .ph3 .phase-label { background: #173404; border-color: #639922; color: #C0DD97; }
+  .ph4 .phase-label { background: #412402; border-color: #BA7517; color: #FAC775; }
+  .ph5 .phase-label { background: #4A1B0C; border-color: #D85A30; color: #F5C4B3; }
+  .ph6 .phase-label { background: #04342C; border-color: #1D9E75; color: #9FE1CB; }
+  .ph7 .phase-label { background: #4B1528; border-color: #D4537E; color: #F4C0D1; }
+  .ph8 .phase-label { background: #501313; border-color: #E24B4A; color: #F7C1C1; }
+  .ph9 .phase-label { background: #412402; border-color: #EF9F27; color: #FAC775; }
+  .ph10 .phase-label { background: #2C2C2A; border-color: #888780; color: #D3D1C7; }
+  .tag-data { background: #042C53; color: #B5D4F4; }
+  .tag-platform { background: #412402; color: #FAC775; }
+  .tag-engine { background: #4A1B0C; color: #F5C4B3; }
+  .tag-ui { background: #4B1528; color: #F4C0D1; }
+  .tag-doc { background: #2C2C2A; color: #D3D1C7; }
+  .tag-db { background: #173404; color: #C0DD97; }
+  .tag-infra { background: #26215C; color: #CECBF6; }
+  .tag-ml { background: #501313; color: #F7C1C1; }
+}
+
+.connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 14px;
+  color: var(--color-text-tertiary);
+  font-size: 10px;
+  margin-bottom: 2px;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 10px;
+}
+</style>
+</head>
+<body>
+<div class="roadmap">
+  <h2>PIDSS — Lộ trình triển khai chi tiết</h2>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot tag-doc"></div>Documentation / Gov</div>
+    <div class="legend-item"><div class="legend-dot tag-data"></div>Data Layer</div>
+    <div class="legend-item"><div class="legend-dot tag-platform"></div>Platform (.NET)</div>
+    <div class="legend-item"><div class="legend-dot tag-engine"></div>Engines (C++/Python)</div>
+    <div class="legend-item"><div class="legend-dot tag-db"></div>Database</div>
+    <div class="legend-item"><div class="legend-dot tag-ui"></div>UI</div>
+    <div class="legend-item"><div class="legend-dot tag-infra"></div>Infrastructure</div>
+    <div class="legend-item"><div class="legend-dot tag-ml"></div>ML / AI</div>
+  </div>
+
+  <div id="phases"></div>
+</div>
+
+<script>
+const phases = [
+  {
+    id: 0, cls: 'ph0', label: 'Phase 0',
+    title: 'Repository Foundation',
+    summary: 'Thiết lập cấu trúc, naming conventions, ADRs, và data governance',
+    modules: [
+      {
+        name: 'Repository Structure', tag: 'infra', items: [
+          'Tạo thư mục gốc: platform/, engines/, data_platform/, presentation/, data/, artifacts/, docs/',
+          'Tạo .gitignore (artifacts/*, *.db, __pycache__/, node_modules/, venv/)',
+          'Tạo .claude/ prompt system (master_prompt.md, architecture/, domain/, roadmap/)',
+          'Đặt .gitkeep cho các thư mục rỗng cần track',
+        ]
+      },
+      {
+        name: 'Naming Conventions', tag: 'doc', items: [
+          'docs/NAMING_CONVENTIONS.md: JSON snake_case, enum snake_case lowercase',
+          'C# PascalCase classes, _camelCase private fields',
+          'C++ PascalCase classes, m_camelCase members',
+          'Python snake_case modules/functions, PascalCase classes',
+          'DB: snake_case plural tables, idx_{table}_{col} indexes',
+          'slug IDs: lowercase letters, digits, underscores only',
+        ]
+      },
+      {
+        name: 'Architecture Decision Records', tag: 'doc', items: [
+          'ADR-0001: Run-based append-only execution model',
+          'ADR-0002: Equipment-centric execution model (Stage vs WorkUnit)',
+          'ADR-0003: Adapter-based versioning & canonical model stability',
+          'docs/STATUS_MODEL.md: Run & Job lifecycle states + transitions',
+          'docs/VERSIONING_POLICY.md: public schema versioning rules',
+          'docs/ARTIFACT_CONVENTION.md: artifact directory layout + manifest',
+          'docs/EXECUTION_MODEL.md: Stage/WorkUnit separation detail',
+        ]
+      },
+      {
+        name: 'Data Governance Layer', tag: 'data', items: [
+          'data/documentation/DATA_DICTIONARY.md: tất cả domain entities, KPIs, FM-01..10',
+          'data/documentation/CANONICAL_MODEL.md: 15 design principles',
+          'data/documentation/VERSION_REGISTRY.md: schema version registry',
+          'data/documentation/DATA_LAYER.md: folder descriptions',
+          'data/lineage/LINEAGE_POLICY.md: artifact lineage chain',
+          'Tạo các thư mục trống với .gitkeep: data/contracts/, schemas/, validation/, transforms/',
+        ]
+      },
+      {
+        name: 'Storage Skeleton', tag: 'infra', items: [
+          'data_storage/feature_store/ — sẽ chứa {feature_set_id}.json',
+          'data_storage/calibration_store/profiles/ + index.json',
+          'data_storage/model_store/ — tương lai Phase 9',
+          'artifacts/ — runtime, gitignored ngoại trừ .gitkeep',
+        ]
+      },
+    ]
+  },
+  {
+    id: 1, cls: 'ph1', label: 'Phase 1',
+    title: 'Domain & Canonical Model',
+    summary: 'Định nghĩa canonical scenario model, ví dụ JSON, và domain explanation',
+    modules: [
+      {
+        name: 'Domain Model Document', tag: 'doc', items: [
+          'docs/DOMAIN_MODEL.md: Factory → Process → Stage → WorkUnit hierarchy',
+          'Giải thích Stage identity permanence (SOP anchor)',
+          'Giải thích WorkUnit execution layer (covered_stage_ids[] là array duy nhất)',
+          'Giải thích Integration concept (length > 1, không phải type)',
+          'Giải thích BOM model (product → component → qty_required)',
+          'Giải thích multi-process factory với processes[] top-level',
+        ]
+      },
+      {
+        name: 'Canonical Scenario Structure', tag: 'data', items: [
+          'Top-level fields: factory_footprint_limit_m2, layout_factor, random_seed',
+          'planning_period: {start_time, end_time, target_output_qty}',
+          'shift_calendar: working_days[], shifts[], breaks[]',
+          'processes[]: {process_id, output, stages[], work_units[]}',
+          'bom[]: {product_id, component_id, quantity_required_per_product}',
+          'Stage fields: stage_id (slug), order (int), name (string) — CHỈ 3 fields này',
+          'WorkUnit fields: unit_id, unit_type, covered_stage_ids[], count, cycle_time, operators_per_unit, requires_operator_presence, reliability?, footprint_m2?, financial?',
+          'Integration object: {stage_weights: {stage_id: float}} — luôn pre-materialized khi length > 1',
+          'Reliability: mtbf_hours, mttr_minutes, age_years?, useful_life_years, degradation_model?',
+          'Financial: capex, opex_annual, useful_life_years',
+          'Flow policy: batch_size, transfer_delay_sec, unit_buffer_area_m2 (per stage/process)',
+          'break_behavior: requires_operator_presence boolean drives stop/continue logic',
+        ]
+      },
+      {
+        name: 'canonical_scenario.example.json', tag: 'data', items: [
+          'data/contracts/canonical_scenario.example.json',
+          'Ví dụ với 2 processes (assembly + packaging), 7 stages mỗi process',
+          'Mix unit_types: manual, semi_auto, auto',
+          'Có ít nhất 1 integrated WorkUnit (covered_stage_ids.length > 1) với stage_weights pre-computed',
+          'BOM linking assembly output → packaging input',
+          'Đầy đủ reliability và financial data cho 1 WorkUnit',
+          'Shift calendar với 2 ca và giờ nghỉ',
+        ]
+      },
+    ]
+  },
+  {
+    id: 2, cls: 'ph2', label: 'Phase 2',
+    title: 'Public Contracts & Schemas',
+    summary: 'JSON Schema Draft-07 cho tất cả public contracts và output schemas',
+    modules: [
+      {
+        name: 'Input Schema: scenario.v1', tag: 'data', items: [
+          'data/schemas/scenario.v1.schema.json',
+          '$schema: draft-07, additionalProperties: false',
+          'schema_version: "1.0" (required, enum)',
+          'factory block: factory_id, name, footprint_limit_m2',
+          'processes[]: process_id, output_ref, stages[], work_units[]',
+          'Stage schema: stage_id, order, name — NO cycle_time hay execution fields',
+          'WorkUnit schema: covered_stage_ids (array, minItems:1), unit_type enum, count, cycle_time (mean+stddev), operators_per_unit, requires_operator_presence',
+          'WorkUnit optional: reliability object, footprint_m2, financial object',
+          'Integration object schema: stage_weights (map, values sum=1.0) — optional in public (adapter computes)',
+          'bom[]: product_id, component_id, quantity_required_per_product (>0)',
+          'planning_period, shift_calendar schemas',
+          'random_seed: integer, optional (adapter assigns if absent)',
+        ]
+      },
+      {
+        name: 'Output Schema: simulation_result.v1', tag: 'data', items: [
+          'data/schemas/simulation_result.v1.schema.json',
+          'schema_version, run_id, produced_at',
+          'throughput: {per_stage: {}, final_product: float}',
+          'stage_utilization: {stage_id: float 0..1}',
+          'blocking_time: {stage_id: float seconds}',
+          'starvation_time: {stage_id: float seconds}',
+          'wip_per_stage: {stage_id: float}, total_wip: float',
+          'lead_time_estimate: float (Little\'s Law)',
+          'machine_area_m2, wip_area_m2, production_footprint_m2',
+          'effective_availability: {unit_id: float} — chỉ khi có reliability data',
+        ]
+      },
+      {
+        name: 'Output Schema: analysis_response.v1', tag: 'data', items: [
+          'data/schemas/analysis_response.v1.schema.json',
+          'KPIs core: throughput, lead_time_estimate, total_wip, wip_per_stage',
+          'bottleneck_stage: stage_id của stage utilization cao nhất',
+          'capacity_utilization: float, operator_utilization: {stage_id: float}',
+          'Footprint KPIs: machine_area_m2, wip_area_m2, production_footprint_m2, throughput_per_m2, wip_ratio',
+          'footprint_constraint_status: enum (within_limit | violation)',
+          'wip_stability: enum (stable | accumulating | unstable), wip_growth_rate',
+          'failure_modes[]: {code, name, severity, affected_stages[], detection_evidence, description}',
+          'binding_component, cross_process_bottleneck_stage (BOM analysis)',
+        ]
+      },
+      {
+        name: 'Output Schema: recommendation.v1', tag: 'data', items: [
+          'data/schemas/recommendation.v1.schema.json',
+          'recommendations[]: ranked array',
+          'Per recommendation: rank, type enum, target_stage_ids[], rationale',
+          'linked_failure_modes[]: FM codes được address',
+          'estimated_impact: {throughput_delta, footprint_delta, roi_percent, payback_years}',
+          'confidence: enum (rule_based | ml_model)',
+        ]
+      },
+      {
+        name: 'Example Contracts', tag: 'data', items: [
+          'data/contracts/scenario.v1.example.json — public input mẫu',
+          'data/contracts/simulation_result.v1.example.json',
+          'data/contracts/analysis_response.v1.example.json',
+          'data/contracts/recommendation.v1.example.json',
+          'data/contracts/scenario.v1.invalid.example.json — negative test',
+        ]
+      },
+      {
+        name: 'Validation Scripts', tag: 'data', items: [
+          'data/validation/validate_schema.py — validate example vs schema',
+          'data/validation/test_schema_positive.py — tất cả valid examples pass',
+          'data/validation/test_schema_negative.py — invalid examples bị reject',
+          'CI-ready: exit code 0 = pass, 1 = fail',
+          'Dependencies: jsonschema>=4.0, pytest',
+        ]
+      },
+    ]
+  },
+  {
+    id: 3, cls: 'ph3', label: 'Phase 3',
+    title: 'Database & Run Metadata',
+    summary: 'Database schema, migrations, và run metadata tracking',
+    modules: [
+      {
+        name: 'Database Setup', tag: 'db', items: [
+          'Chọn: PostgreSQL (production) hoặc SQLite (dev/test)',
+          'Cấu hình connection string trong appsettings.json (không hardcode)',
+          'EF Core setup trong Pidss.Platform hoặc raw SQL migrations',
+          'Migration runner: dotnet ef migrations add / raw SQL scripts',
+          'Naming: migrations/0001_create_runs_table.sql, ...',
+        ]
+      },
+      {
+        name: 'Table: runs', tag: 'db', items: [
+          'run_id UUID PRIMARY KEY',
+          'status VARCHAR CHECK (IN Created,Validating,Queued,Running,Completed,Failed,Cancelled)',
+          'schema_version VARCHAR NOT NULL',
+          'created_at TIMESTAMPTZ NOT NULL',
+          'queued_at, started_at, completed_at TIMESTAMPTZ nullable',
+          'error_message TEXT nullable, error_detail JSONB nullable',
+          'artifact_base_path TEXT — path đến artifacts/{run_id}/',
+          'random_seed BIGINT nullable (from canonical)',
+        ]
+      },
+      {
+        name: 'Table: jobs', tag: 'db', items: [
+          'job_id UUID PRIMARY KEY',
+          'run_id UUID FK → runs.run_id',
+          'job_type VARCHAR CHECK (IN Simulation, Analytics)',
+          'status VARCHAR CHECK (IN Pending, Queued, Running, Completed, Failed)',
+          'engine_version VARCHAR nullable — captured từ engine stdout line 1',
+          'created_at, started_at, completed_at TIMESTAMPTZ',
+          'exit_code INT nullable',
+          'error_message TEXT nullable',
+          'execution_time_ms BIGINT nullable',
+        ]
+      },
+      {
+        name: 'Table: run_metrics', tag: 'db', items: [
+          'run_id UUID FK → runs.run_id, PRIMARY KEY',
+          'throughput_final FLOAT — final product throughput',
+          'lead_time_estimate_sec FLOAT',
+          'total_wip FLOAT',
+          'bottleneck_stage_id VARCHAR',
+          'production_footprint_m2 FLOAT',
+          'throughput_per_m2 FLOAT',
+          'footprint_constraint_status VARCHAR',
+          'capacity_utilization FLOAT',
+          'failure_mode_count INT',
+          'indexed: run_id, bottleneck_stage_id',
+        ]
+      },
+      {
+        name: 'Table: run_recommendations', tag: 'db', items: [
+          'id UUID PRIMARY KEY',
+          'run_id UUID FK, rank INT',
+          'recommendation_type VARCHAR',
+          'target_stage_ids JSONB — array of stage_ids',
+          'linked_failure_modes JSONB',
+          'roi_percent FLOAT nullable, payback_years FLOAT nullable',
+          'confidence VARCHAR (rule_based | ml_model)',
+          'rationale TEXT',
+          'UNIQUE (run_id, rank)',
+        ]
+      },
+      {
+        name: 'Table: run_artifacts', tag: 'db', items: [
+          'id UUID PRIMARY KEY',
+          'run_id UUID FK',
+          'artifact_type VARCHAR — scenario_snapshot, canonical_scenario, simulation_result, ...',
+          'filename VARCHAR, path TEXT',
+          'size_bytes BIGINT, sha256 VARCHAR(64)',
+          'written_at TIMESTAMPTZ',
+          'UNIQUE (run_id, artifact_type)',
+        ]
+      },
+      {
+        name: 'Artifact Manifest Model', tag: 'db', items: [
+          'artifact_manifest.json schema: run_id, created_at, engine_versions{}',
+          'engine_versions: {simulator_version, analytics_version}',
+          'artifacts[]: {type, filename, path, size_bytes, sha256, written_at}',
+          'Platform viết file này sau khi tất cả jobs Completed',
+          'SHA-256 checksum verification on demand',
+        ]
+      },
+    ]
+  },
+  {
+    id: 4, cls: 'ph4', label: 'Phase 4',
+    title: 'Platform Core',
+    summary: 'ScenarioBuilder, Adapter, DataSources, Orchestration, và Platform API',
+    modules: [
+      {
+        name: 'API Layer', tag: 'platform', items: [
+          'POST /api/runs — tạo run mới, nhận public scenario payload',
+          'GET /api/runs/{run_id} — lấy run status + metadata',
+          'GET /api/runs — list runs với filter (status, date range)',
+          'GET /api/runs/{run_id}/metrics — KPI summary',
+          'GET /api/runs/{run_id}/recommendations — ranked recommendations',
+          'POST /api/runs/compare — A/B comparison (baseline_run_id, candidate_run_id)',
+          'GET /api/runs/{run_id}/artifacts — artifact manifest',
+          'RunController, MetricsController, ComparisonController',
+          'Middleware: request logging, error handling, correlation ID',
+          'Swagger/OpenAPI documentation',
+        ]
+      },
+      {
+        name: 'Contracts (DTOs)', tag: 'platform', items: [
+          'CreateRunRequest: schema_version, scenario payload, calibration_profile_id?',
+          'RunStatusDto: run_id, status, created_at, started_at, completed_at, error',
+          'JobStatusDto: job_id, job_type, status, engine_version, execution_time_ms',
+          'RunMetricsDto: throughput, lead_time, wip, bottleneck, footprint KPIs',
+          'RecommendationDto: rank, type, rationale, impact, confidence',
+          'ComparisonRequest/ComparisonResultDto: delta metrics, FM diff',
+          'ArtifactManifestDto: run_id, artifacts[], engine_versions',
+        ]
+      },
+      {
+        name: 'DataSources (Read-only)', tag: 'platform', items: [
+          'IFeatureStoreReader: Task<FeatureSetDto?> ReadAsync(string featureSetId)',
+          'ICalibrationProfileProvider: Task<CalibrationProfileDto?> GetAsync(string profileId)',
+          'FileSystemFeatureStoreReader — đọc data_storage/feature_store/{id}.json',
+          'FileSystemCalibrationProfileProvider — đọc data_storage/calibration_store/profiles/{id}.json',
+          'KHÔNG có business logic, KHÔNG có transformation',
+          'Đăng ký qua DI container với interface',
+        ]
+      },
+      {
+        name: 'ScenarioBuilder', tag: 'platform', items: [
+          'IScenarioBuilder: Task<ScenarioSnapshot> BuildAsync(CreateRunRequest request)',
+          'ScenarioBuilderService — inject IFeatureStoreReader + ICalibrationProfileProvider',
+          'Merge: user input + feature data (capacity hints, process structure) + calibration profile (cycle time distributions)',
+          'Output: enriched scenario snapshot (vẫn là PUBLIC schema format)',
+          'KHÔNG validate schema, KHÔNG produce canonical',
+          'KHÔNG estimate params hay fit models',
+          'Ghi scenario_snapshot.json ngay sau khi build xong',
+        ]
+      },
+      {
+        name: 'Adapter (CRITICAL — duy nhất authority)', tag: 'platform', items: [
+          'IScenarioAdapter: CanonicalScenario Adapt(ScenarioSnapshot snapshot)',
+          'ScenarioAdapterV1 — handles schema_version = "1.0"',
+          'Validate snapshot vs scenario.v1.schema.json',
+          'Translate: public field names → canonical equivalents',
+          'Inject default values: layout_factor=1.3, unit_buffer_area_m2, transfer_delay_sec',
+          'Assign random_seed nếu absent (deterministic hash-based)',
+          'Normalize multi-process structure vào processes[] array',
+          'Validate BOM consistency (component IDs, quantities > 0)',
+          'COMPUTE stage_weights cho WorkUnits có covered_stage_ids.length > 1',
+          'stage_weights policy: equal-share default, time-proportional nếu cycle_time provided, user-specified override',
+          'Validate: Σ stage_weights == 1.0 (tolerance 1e-6)',
+          'Adjust transfer_delay cho integrated WorkUnits',
+          'Materialize integration.stage_weights vào canonical WorkUnit',
+          'factory_footprint_limit_m2 là REQUIRED top-level field',
+          'Serialize → canonical_scenario.json (immutable sau khi ghi)',
+        ]
+      },
+      {
+        name: 'Run Orchestration', tag: 'platform', items: [
+          'IRunOrchestrator: Task<RunId> SubmitAsync(CreateRunRequest request)',
+          'RunOrchestratorService — coordinate toàn bộ pipeline',
+          'Tạo run record: run_id (UUID v4), status=Created',
+          'Khởi tạo 2 job records: Simulation (Pending), Analytics (Pending)',
+          'Gọi ScenarioBuilder → ghi scenario_snapshot.json',
+          'Gọi Adapter → validate + canonicalize → ghi canonical_scenario.json',
+          'FIFO concurrency queue: max_concurrent_runs configurable',
+          'ConcurrencyControl: SemaphoreSlim hoặc Channel-based queue',
+          'Status transitions theo STATUS_MODEL.md',
+          'Ghi artifacts/{run_id}/ directory structure',
+        ]
+      },
+      {
+        name: 'Engine Invocation', tag: 'platform', items: [
+          'IEngineRunner: Task<EngineResult> RunAsync(JobRecord job, string runArtifactsPath)',
+          'SimulationEngineRunner — invoke C++ CLI process',
+          'AnalyticsEngineRunner — invoke Python CLI process',
+          'Capture stdout line 1 = engine version string',
+          'Capture full stdout + stderr → ghi vào logs/simulator.log / analytics.log',
+          'Capture exit code: 0 = success, non-zero = failure',
+          'Timeout configurable (default 30 min)',
+          'Pass env vars: PIDSS_ARTIFACT_PATH, PIDSS_RUN_ID',
+          'Process isolation: không shared memory',
+        ]
+      },
+      {
+        name: 'Post-Processing & Persistence', tag: 'platform', items: [
+          'Sau khi Analytics hoàn thành: parse analysis_response.json + recommendation.json',
+          'Upsert run_metrics table từ analysis_response KPIs',
+          'Upsert run_recommendations table từ recommendation.json',
+          'Compute SHA-256 checksums cho tất cả artifacts',
+          'Ghi artifact_manifest.json với engine_versions + artifact list',
+          'Upsert run_artifacts table',
+          'Update run status → Completed',
+          'Error path: update status → Failed, ghi error_message',
+        ]
+      },
+      {
+        name: 'A/B Comparison Engine', tag: 'platform', items: [
+          'ComparisonService: Compare(baseline_run_id, candidate_run_id)',
+          'Đọc từ artifacts của cả 2 runs — KHÔNG re-invoke engines',
+          'Compute delta: throughput_delta, lead_time_delta, wip_delta, footprint_delta, roi_delta, throughput_per_m2_delta',
+          'FM diff: newly_detected[], resolved[] failure modes',
+          'Stage IDs là stable anchor — per-stage delta valid',
+          'Reject nếu either run không ở trạng thái Completed',
+        ]
+      },
+    ]
+  },
+  {
+    id: 5, cls: 'ph5', label: 'Phase 5',
+    title: 'C++ Simulation Engine v1',
+    summary: 'Aggregate digital twin — deterministic, flow-based, không discrete-event',
+    modules: [
+      {
+        name: 'CLI Interface', tag: 'engine', items: [
+          'Entry point: main() đọc args: --input <path> --output <path>',
+          'Stdout line 1: "PIDSS-Simulator X.Y.Z" (engine version)',
+          'Exit code 0 = success, non-zero = failure với error message trên stderr',
+          'Input: canonical_scenario.json (path từ env var hoặc arg)',
+          'Output dir: artifacts/{run_id}/ (path từ env var hoặc arg)',
+          'Produces: simulation_result.json + production_records.csv',
+        ]
+      },
+      {
+        name: 'JSON Parser Module', tag: 'engine', items: [
+          'nlohmann/json (header-only, đã có trong third_party/)',
+          'CanonicalScenarioParser: parse canonical_scenario.json → domain structs',
+          'Struct: FactoryConfig, ProcessConfig, StageConfig, WorkUnitConfig',
+          'WorkUnitConfig: covered_stage_ids (std::vector<std::string>), stage_weights (map)',
+          'Struct: ShiftCalendar, BreakWindow, PlanningPeriod',
+          'Error handling: required fields missing → exit non-zero với descriptive error',
+          'Validate: covered_stage_ids.size() >= 1 (mandatory)',
+        ]
+      },
+      {
+        name: 'Capacity Computation', tag: 'engine', items: [
+          'Tính available_time_sec từ shift_calendar + planning_period',
+          'Break impact: nếu requires_operator_presence=true → trừ break_time',
+          'Auto units với requires_operator_presence=false → không trừ break',
+          'Effective availability: mtbf / (mtbf + mttr/60) — chỉ khi có reliability data',
+          'max_throughput_per_unit = available_time × availability / cycle_time_mean',
+          'Stage pool throughput = max_throughput × count (number of units)',
+          'Integrated WorkUnit: throughput attributed to each covered stage via stage_weights',
+        ]
+      },
+      {
+        name: 'Aggregate Flow Model', tag: 'engine', items: [
+          'Bottleneck stage = stage với throughput thấp nhất trong chain',
+          'System throughput = min(stage_throughputs) cho mỗi process',
+          'Blocking detection: nếu upstream_throughput > downstream_throughput',
+          'blocking_time ≈ (upstream_max - system_throughput) / upstream_max × available_time',
+          'Starvation detection: nếu downstream_throughput > upstream_throughput',
+          'WIP estimation per stage boundary: WIP_stage = throughput × effective_wait_time',
+          'effective_wait_time = batch_gating_delay + transfer_delay_sec + downstream_congestion',
+          'batch_gating_delay ≈ (batch_size / 2) / throughput',
+          'total_wip = Σ WIP_stage across all stage boundaries',
+          'lead_time_estimate = total_wip / system_throughput (Little\'s Law)',
+        ]
+      },
+      {
+        name: 'Footprint Computation', tag: 'engine', items: [
+          'machine_area_m2 = Σ(unit.count × unit.footprint_m2) — chỉ units có footprint_m2',
+          'wip_area_m2 = Σ(wip_per_stage × unit_buffer_area_m2) per stage boundary',
+          'production_footprint_m2 = (machine_area_m2 + wip_area_m2) × layout_factor',
+          'Output trong simulation_result.json',
+        ]
+      },
+      {
+        name: 'Determinism & Reproducibility', tag: 'engine', items: [
+          'random_seed từ canonical_scenario.json — REQUIRED',
+          'Mọi random operations (cycle_time distribution sampling) dùng seeded RNG',
+          'std::mt19937 seeded với random_seed value',
+          'Same canonical + same seed → identical output (verify bằng test)',
+          'Nếu random_seed absent: exit non-zero với error',
+        ]
+      },
+      {
+        name: 'Output Writers', tag: 'engine', items: [
+          'SimulationResultWriter: serialize kết quả → simulation_result.json',
+          'ProductionRecordsWriter: ghi production_records.csv',
+          'CSV columns: stage_id, period, units_produced, utilization, blocking_time_sec, starvation_time_sec, wip_at_boundary',
+          'units_produced cho integrated WorkUnit: attributed via pre-computed stage_weights',
+          'Atomic write: ghi vào temp file trước, rename sau (tránh partial writes)',
+        ]
+      },
+    ]
+  },
+  {
+    id: 6, cls: 'ph6', label: 'Phase 6',
+    title: 'Python Analytics Engine v1',
+    summary: 'KPI computation, failure mode detection FM-01..10, ROI analysis, recommendations',
+    modules: [
+      {
+        name: 'CLI Interface', tag: 'engine', items: [
+          'Entry point: pidss_analytics.py --run-dir <artifacts/{run_id}/path>',
+          'Print line 1: "PIDSS-Analytics X.Y.Z"',
+          'Reads: canonical_scenario.json + simulation_result.json + production_records.csv',
+          'Writes: analysis_response.json + recommendation.json',
+          'Exit 0 = success, non-zero = failure',
+          'Dependencies: pandas, numpy — no heavy ML libs trong phase này',
+        ]
+      },
+      {
+        name: 'Input Loaders', tag: 'engine', items: [
+          'load_canonical(path) → dict',
+          'load_simulation_result(path) → SimulationResult dataclass',
+          'load_production_records(path) → pd.DataFrame',
+          'Validate: required fields có mặt, types đúng',
+          'Fail fast với descriptive error nếu required data missing',
+        ]
+      },
+      {
+        name: 'KPI Computation', tag: 'engine', items: [
+          'throughput: từ simulation_result.throughput',
+          'lead_time_estimate: đọc từ simulation, validate vs Little\'s Law',
+          'total_wip, wip_per_stage: pass-through từ simulation',
+          'bottleneck_stage: stage_id với stage_utilization cao nhất',
+          'capacity_utilization = actual_throughput / max_theoretical_throughput',
+          'operator_utilization per stage: active_time / (available_time × operators_per_unit)',
+          'throughput_per_m2 = throughput / production_footprint_m2',
+          'wip_ratio = total_wip / baseline_wip (baseline = target từ planning_period)',
+          'BOM capacity: min(component_throughput / qty_required) across BOM entries',
+          'binding_component: BOM entry limiting final product capacity',
+        ]
+      },
+      {
+        name: 'Failure Mode Detection', tag: 'engine', items: [
+          'FM-01 Downstream Blocking: blocking_time > threshold AND downstream utilization ≈ 100%',
+          'FM-02 Upstream Starvation: starvation_time > threshold AND upstream utilization ≈ 100%',
+          'FM-03 Batch Size Mismatch: batch_size ratio > 3x between adjacent stages',
+          'FM-04 Bottleneck Migration: so sánh với baseline run nếu có; bottleneck stage shifts',
+          'FM-05 WIP Explosion: total_wip growth rate positive AND wip_ratio > 1.5',
+          'FM-06 Reliability Dominance: availability < 0.85 AND downtime share > 30% of capacity loss',
+          'FM-07 Single Point of Failure: covered_stage_ids.length > 1 AND count == 1 AND no redundant unit',
+          'FM-08 Footprint Constraint: production_footprint_m2 > factory_footprint_limit_m2',
+          'FM-09 Labor Imbalance: variance(operator_utilization) > threshold, max - min > 0.4',
+          'FM-10 ROI Illusion: system_capacity > 1.5 × target_output_qty AND payback_years > 5',
+          'Output: failure_modes[{code, name, severity, affected_stages[], evidence, description}]',
+        ]
+      },
+      {
+        name: 'ROI Analysis', tag: 'engine', items: [
+          'Đọc financial data từ canonical WorkUnits: capex, opex_annual, useful_life_years',
+          'Throughput gain value = (candidate_throughput - baseline) × unit_margin × working_days',
+          'Annual benefit = throughput_gain_value - opex_annual_delta',
+          'payback_years = capex / annual_benefit',
+          'roi_percent = (annual_benefit × useful_life - capex) / capex × 100',
+          'Chỉ compute khi có financial data, otherwise null',
+        ]
+      },
+      {
+        name: 'Recommendation Engine (Rule-based)', tag: 'engine', items: [
+          'Map FM codes → recommendation types',
+          'FM-01 → increase downstream capacity / reduce upstream batch size',
+          'FM-02 → increase upstream machines / reduce batch size',
+          'FM-03 → harmonize batch sizes across stages',
+          'FM-04 → reinforce new bottleneck / multi-stage automation',
+          'FM-05 → rebalance stage capacity / reduce batch sizes',
+          'FM-06 → redundancy machines / preventive maintenance',
+          'FM-07 → parallel automation cells / legacy backup',
+          'FM-08 → retire legacy / optimize layout / reduce scope',
+          'FM-09 → reallocate operators / cross-skill training',
+          'FM-10 → postpone investment / phased deployment',
+          'Rank bởi: severity × roi_impact',
+          'Output: recommendation.json với confidence = "rule_based"',
+        ]
+      },
+      {
+        name: 'Output Writers', tag: 'engine', items: [
+          'write_analysis_response(path, result) — serialize analysis_response.json',
+          'write_recommendation(path, recommendations) — serialize recommendation.json',
+          'Validate output vs schemas trước khi ghi (jsonschema)',
+          'Atomic write pattern (temp file + rename)',
+        ]
+      },
+    ]
+  },
+  {
+    id: 7, cls: 'ph7', label: 'Phase 7',
+    title: 'UI MVP (React)',
+    summary: 'Minimal decision-support interface — API client only, no business logic',
+    modules: [
+      {
+        name: 'Project Setup', tag: 'ui', items: [
+          'presentation/Pidss.Web.React/ — Vite + React + TypeScript (đã có skeleton)',
+          'React Router DOM cho SPA navigation',
+          'Axios hoặc fetch wrapper cho API calls',
+          'shadcn/ui hoặc Radix UI cho components',
+          'TanStack Query cho server state management',
+          'Recharts cho data visualization',
+          'API base URL từ .env (VITE_API_BASE_URL)',
+        ]
+      },
+      {
+        name: 'API Client Layer', tag: 'ui', items: [
+          'api/runs.ts: createRun(), getRunStatus(), listRuns()',
+          'api/metrics.ts: getRunMetrics(runId)',
+          'api/recommendations.ts: getRecommendations(runId)',
+          'api/comparison.ts: compareRuns(baselineId, candidateId)',
+          'api/artifacts.ts: getArtifactManifest(runId)',
+          'Error handling: typed errors, retry logic',
+          'Types: RunDto, MetricsDto, RecommendationDto, ComparisonResultDto',
+        ]
+      },
+      {
+        name: 'Scenario Input Form', tag: 'ui', items: [
+          'ScenarioBuilderPage: multi-step form',
+          'Step 1: Factory config (name, footprint_limit, layout_factor)',
+          'Step 2: Processes — add/edit process với stages',
+          'Step 3: WorkUnits — assign unit_type, cycle_time, operators per stage',
+          'Step 4: BOM configuration',
+          'Step 5: Planning period + shift calendar',
+          'Step 6: Review + submit',
+          'JSON preview panel (raw scenario payload)',
+          'Validation real-time (schema validation trong browser)',
+        ]
+      },
+      {
+        name: 'Run Tracking', tag: 'ui', items: [
+          'RunListPage: table of runs với status badges, timestamps',
+          'RunDetailPage: run info + job pipeline timeline',
+          'Auto-refresh polling khi run đang Running',
+          'Job status timeline: Created → Validating → Queued → Running → Completed',
+          'Error display nếu run Failed',
+          'Link tới artifact browser',
+        ]
+      },
+      {
+        name: 'KPI Dashboard', tag: 'ui', items: [
+          'KpiDashboardPage: summary cards + charts',
+          'Throughput gauge / bar chart',
+          'Stage utilization horizontal bar chart',
+          'WIP per stage line/area chart',
+          'Footprint breakdown (machine area vs WIP area)',
+          'Failure mode badges với severity colors',
+          'Bottleneck stage highlight',
+        ]
+      },
+      {
+        name: 'Scenario Comparison View', tag: 'ui', items: [
+          'ComparisonPage: select 2 runs (baseline + candidate)',
+          'Delta metrics table: throughput Δ, lead_time Δ, footprint Δ, ROI Δ',
+          'Side-by-side KPI charts',
+          'Failure mode diff: newly detected (red) vs resolved (green)',
+          'Per-stage comparison bars',
+        ]
+      },
+      {
+        name: 'Recommendation Panel', tag: 'ui', items: [
+          'RecommendationsPanel: ranked list với expand/collapse',
+          'Per recommendation: rank badge, type, rationale text',
+          'Impact metrics: ROI %, payback years, throughput delta',
+          'Linked failure modes chips',
+          'Confidence indicator (rule_based vs ml_model)',
+        ]
+      },
+    ]
+  },
+  {
+    id: 8, cls: 'ph8', label: 'Phase 8',
+    title: 'Optimization Batch',
+    summary: 'Multi-scenario exploration, ranking, phased automation search',
+    modules: [
+      {
+        name: 'Batch Runner (Platform)', tag: 'platform', items: [
+          'POST /api/batch — submit batch config: base_scenario + parameter_space',
+          'Parameter space: vary unit_type, count, cycle_time ranges per WorkUnit',
+          'Generate N scenarios từ parameter grid hoặc random sampling',
+          'Mỗi scenario phải đi qua canonical pipeline (KHÔNG bypass adapter)',
+          'Bounded parallel execution: max_parallel_runs configurable',
+          'Batch ID tracking: tổng hợp kết quả tất cả runs trong batch',
+        ]
+      },
+      {
+        name: 'Scenario Generator', tag: 'platform', items: [
+          'ScenarioGenerator: generate public scenarios từ parameter space',
+          'Strategies: grid search, random search, Sobol sequence sampling',
+          'Each generated scenario có deterministic random_seed (hash of params)',
+          'Validate mỗi generated scenario trước khi submit',
+          'Duplicate detection: skip nếu identical canonical đã chạy',
+        ]
+      },
+      {
+        name: 'Ranking & Summary (Python)', tag: 'engine', items: [
+          'batch_ranker.py — đọc tất cả analysis_response.json + recommendation.json của batch',
+          'Rank by: composite score (throughput_gain × roi × -footprint_delta)',
+          'Pareto frontier analysis: throughput vs cost tradeoffs',
+          'Top-K scenarios với comparative table',
+          'Output: batch_summary.json, batch_ranking.json',
+          'Visualization data cho heatmaps và scatter plots',
+        ]
+      },
+      {
+        name: 'Batch UI', tag: 'ui', items: [
+          'BatchConfigPage: setup parameter space, review generated count',
+          'BatchProgressPage: live progress (N/total runs completed)',
+          'BatchResultsPage: ranking table, Pareto chart, Top-K details',
+          'Drill-down: từ batch result → full run detail',
+        ]
+      },
+    ]
+  },
+  {
+    id: 9, cls: 'ph9', label: 'Phase 9',
+    title: 'ML Decision Intelligence',
+    summary: 'Thay thế rule-based recommender bằng ML, scenario ranking, capacity prediction',
+    modules: [
+      {
+        name: 'Feature Extraction', tag: 'ml', items: [
+          'extract_features.py — từ simulation_result.json + canonical_scenario.json',
+          'Features: stage_utilization vector, WIP vector, throughput, footprint, batch_sizes',
+          'WorkUnit features: unit_type one-hot, count, cycle_time, reliability metrics',
+          'BOM complexity features: num_processes, num_bom_entries',
+          'Label generation: FM codes detected, ROI outcomes, throughput gain %',
+          'Feature store cho ML: data_storage/model_store/{training_run_id}/',
+        ]
+      },
+      {
+        name: 'Model Training Pipeline', tag: 'ml', items: [
+          'train_recommendation_model.py — supervised, input: features, labels: recommendation_types',
+          'train_roi_predictor.py — regression, input: features, label: roi_percent',
+          'train_capacity_predictor.py — regression, input: features, label: throughput',
+          'train_scenario_ranker.py — learning-to-rank, input: scenario pairs, label: preference',
+          'Cross-validation, train/val/test split',
+          'Artifacts: model.pkl, metrics.json, feature_importance.json',
+          'Model versioning trong data_storage/model_store/',
+        ]
+      },
+      {
+        name: 'ML Inference Integration', tag: 'engine', items: [
+          'ml_recommender.py — load model.pkl, run inference trên extracted features',
+          'Fallback: nếu ML unavailable → fall back sang rule-based (Phase 6)',
+          'Output recommendations với confidence = "ml_model"',
+          'A/B comparison: rule_based vs ml_model recommendations trong same run',
+          'Model path configurable qua env var PIDSS_MODEL_PATH',
+        ]
+      },
+      {
+        name: 'Model Evaluation', tag: 'ml', items: [
+          'evaluate_models.py — precision/recall cho FM detection, MAE/RMSE cho regression',
+          'Comparison report: rule_based vs ml_model accuracy',
+          'Artifacts: model_evaluation.json, confusion_matrix.json',
+          'Optional: evaluation dashboard trong UI (separate page)',
+        ]
+      },
+    ]
+  },
+  {
+    id: 10, cls: 'ph10', label: 'Phase 10',
+    title: 'Observed Import (Optional)',
+    summary: 'Import dữ liệu thực từ MES/CSV để compare với simulation',
+    modules: [
+      {
+        name: 'CSV Observed Import', tag: 'data', items: [
+          'POST /api/runs/{run_id}/observed — upload CSV file',
+          'CSV schema: stage_id, timestamp, units_produced, cycle_time_actual, operator_count',
+          'Normalization: resample sang same periods as simulation_result.csv',
+          'Validation: stage_ids phải match với canonical_scenario stages',
+          'Artifacts: observed_data.csv, observed_kpis.json',
+        ]
+      },
+      {
+        name: 'Gap Analysis', tag: 'engine', items: [
+          'gap_analysis.py — compare simulated vs observed KPIs',
+          'Per-stage: throughput gap, utilization gap, WIP gap',
+          'System-level: capacity gap, lead time gap',
+          'Root cause hints: identify stages with largest simulation-vs-reality gap',
+          'Output: gap_analysis.json với commentary per gap',
+        ]
+      },
+      {
+        name: 'MES API Integration (Future)', tag: 'platform', items: [
+          'IObservedDataSource interface — pluggable',
+          'FileBasedObservedDataSource — CSV implementation (hiện tại)',
+          'MesApiObservedDataSource — future, gọi MES REST API (KHÔNG trực tiếp DB)',
+          'Config: MES API URL, credentials via secrets manager',
+          'Rate limiting, retry, circuit breaker pattern',
+        ]
+      },
+    ]
+  },
+];
+
+function renderPhase(ph) {
+  const row = document.createElement('div');
+  row.className = `phase-row ${ph.cls}`;
+  row.innerHTML = `
+    <div class="phase-label" onclick="togglePhase(this.parentElement)">
+      <span class="phase-num">${ph.label}</span>
+      <span class="phase-title">${ph.title}</span>
+    </div>
+    <div class="phase-body">
+      <div class="phase-summary" onclick="togglePhase(this.closest('.phase-row'))">
+        <span>${ph.summary}</span>
+        <span class="toggle-icon">▼</span>
+      </div>
+      <div class="modules-grid">
+        ${ph.modules.map(m => `
+          <div class="module-card">
+            <div class="module-header">
+              <span>${m.name}</span>
+              <span class="module-tag tag-${m.tag}">${m.tag}</span>
+            </div>
+            <ul class="module-items">
+              ${m.items.map(i => `<li>${i}</li>`).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  return row;
+}
+
+function togglePhase(row) {
+  row.classList.toggle('open');
+}
+
+const container = document.getElementById('phases');
+phases.forEach((ph, i) => {
+  container.appendChild(renderPhase(ph));
+  if (i < phases.length - 1) {
+    const conn = document.createElement('div');
+    conn.className = 'connector';
+    conn.textContent = '↓';
+    container.appendChild(conn);
+  }
+});
+
+// Open phase 0 by default
+document.querySelector('.phase-row').classList.add('open');
+</script>
+</body>
+</html>

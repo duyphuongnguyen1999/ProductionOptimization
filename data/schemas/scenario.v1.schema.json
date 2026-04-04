@@ -1,0 +1,455 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pidss/schemas/scenario.v1.schema.json",
+  "title": "PIDSS Scenario Input Schema",
+  "description": "Public scenario input contract for PIDSS v1.0. Submitted by clients to POST /runs. The Platform Adapter validates this payload and transforms it into canonical_scenario.json. NOTE: schema_version is a PUBLIC field only — it is NOT present in canonical_scenario.json.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "scenario_name",
+    "factory",
+    "shifts",
+    "days",
+    "materials",
+    "products",
+    "processes",
+    "work_unit_models",
+    "work_units",
+    "calendar"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Public schema version. Used by Platform Adapter for version routing. NEVER present in canonical_scenario.json."
+    },
+    "scenario_name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 255
+    },
+    "scenario_description": {
+      "type": "string",
+      "maxLength": 2000
+    },
+    "calibration_profile_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional. References a calibration profile in the Calibration Store."
+    },
+    "random_seed": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Optional. If absent, Platform generates one and embeds it in canonical."
+    },
+    "factory": { "$ref": "#/definitions/Factory" },
+    "shifts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Shift" }
+    },
+    "days": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Day" }
+    },
+    "materials": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Material" }
+    },
+    "products": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Product" }
+    },
+    "processes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/Process" }
+    },
+    "work_unit_models": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/WorkUnitModel" }
+    },
+    "work_units": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/WorkUnit" }
+    },
+    "calendar": { "$ref": "#/definitions/Calendar" }
+  },
+  "definitions": {
+    "Factory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["footprint_limit_m2", "layout_factor"],
+      "properties": {
+        "footprint_limit_m2": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Hard physical floor space limit in m2. Analytics detects FM-08 when exceeded."
+        },
+        "layout_factor": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 2.0,
+          "description": "Aisle/movement multiplier. Typically 1.2–1.4."
+        }
+      }
+    },
+    "Shift": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["shift_id", "name", "start_minute_of_day", "duration_minutes", "net_labor_minutes", "performance_factor", "breaks"],
+      "properties": {
+        "shift_id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "start_minute_of_day": { "type": "integer", "minimum": 0, "maximum": 1439 },
+        "duration_minutes": { "type": "integer", "minimum": 1 },
+        "net_labor_minutes": { "type": "integer", "minimum": 1 },
+        "performance_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "breaks": { "type": "array", "items": { "$ref": "#/definitions/Break" } }
+      }
+    },
+    "Break": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["start_minute_from_shift_start", "duration_minutes", "type", "coverage_mode", "min_coverage_ratio"],
+      "properties": {
+        "start_minute_from_shift_start": { "type": "integer", "minimum": 0 },
+        "duration_minutes": { "type": "integer", "minimum": 1 },
+        "type": { "type": "string", "enum": ["meeting", "rest", "meal"] },
+        "coverage_mode": { "type": "string", "enum": ["all_stop", "staggered"] },
+        "min_coverage_ratio": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    "Day": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["day_id", "name", "shift_ids", "day_performance_factor", "labor_cost_factor", "min_coverage_ratio", "max_coverage_ratio"],
+      "properties": {
+        "day_id": { "type": "string", "enum": ["weekday", "weekend", "holiday", "special"] },
+        "name": { "type": "string", "minLength": 1 },
+        "shift_ids": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+        "day_performance_factor": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "labor_cost_factor": { "type": "number", "minimum": 0.0 },
+        "min_coverage_ratio": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "max_coverage_ratio": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    "Material": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["material_id", "name"],
+      "properties": {
+        "material_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "name": { "type": "string", "minLength": 1 }
+      }
+    },
+    "Product": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["product_id", "name", "type", "bill_of_materials"],
+      "properties": {
+        "product_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["intermediate_product", "semi_product", "finished_product"] },
+        "bill_of_materials": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/BomItem" },
+          "description": "REQUIRED on ALL product types — intermediate, semi, and finished."
+        }
+      }
+    },
+    "BomItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "quantity_required_per_output"],
+      "properties": {
+        "type": { "type": "string", "enum": ["material", "intermediate_product", "semi_product"] },
+        "id": { "type": "string", "minLength": 1 },
+        "quantity_required_per_output": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "Process": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["process_id", "name", "output_product_id", "stages"],
+      "properties": {
+        "process_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "output_product_id": { "type": "string", "minLength": 1, "description": "Must reference a semi_product in products[]." },
+        "stages": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/Stage" } }
+      }
+    },
+    "Stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage_id", "order", "name", "eligible_work_unit_model_ids", "input", "output", "stage_parameters", "wip_model"],
+      "properties": {
+        "stage_id": { "type": "string", "pattern": "^[a-z0-9_]+$", "description": "Immutable stable identifier. Never renamed or deleted." },
+        "order": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "eligible_work_unit_model_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Adapter validates all referenced model_ids exist in work_unit_models[]."
+        },
+        "input": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/StageIOItem" } },
+        "output": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/StageIOItem" } },
+        "stage_parameters": { "$ref": "#/definitions/StageParameters" },
+        "wip_model": {
+          "oneOf": [
+            { "$ref": "#/definitions/WipModel" },
+            { "type": "null" }
+          ],
+          "description": "null ONLY on the last stage of each process."
+        }
+      }
+    },
+    "StageIOItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id"],
+      "properties": {
+        "type": { "type": "string", "enum": ["material", "intermediate_product", "semi_product"] },
+        "id": { "type": "string", "minLength": 1 }
+      }
+    },
+    "StageParameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defect_rate", "rework"],
+      "properties": {
+        "defect_rate": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Process-design baseline defect rate. Simulator uses work_unit_parameters.defect_rate as primary override."
+        },
+        "rework": { "$ref": "#/definitions/ReworkPolicy" }
+      }
+    },
+    "ReworkPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "rework_rate", "maximum_rework_cycles"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "rework_rate": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "maximum_rework_cycles": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "WipModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["buffer_id", "capacity_units", "initial_wip_units", "buffer_policy"],
+      "properties": {
+        "buffer_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "capacity_units": { "type": "integer", "minimum": 1 },
+        "initial_wip_units": { "type": "integer", "minimum": 0 },
+        "buffer_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type"],
+          "properties": {
+            "type": { "type": "string", "enum": ["fifo"] }
+          }
+        }
+      }
+    },
+    "WorkUnitModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model_id", "name", "type", "covered_stage_ids", "operators_per_unit", "requires_operator_presence", "footprint_m2", "unit_buffer_area_m2", "transfer_delay_sec", "batch_size", "cycle_time_default"],
+      "properties": {
+        "model_id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+        "name": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "enum": ["manual", "semi_auto", "auto"] },
+        "covered_stage_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "description": "ALWAYS an array, min 1. No singular stage_id field. When length > 1, integration is required."
+        },
+        "operators_per_unit": { "type": "integer", "minimum": 0 },
+        "requires_operator_presence": { "type": "boolean" },
+        "footprint_m2": { "type": "number", "exclusiveMinimum": 0 },
+        "unit_buffer_area_m2": { "type": "number", "minimum": 0 },
+        "transfer_delay_sec": { "type": "integer", "minimum": 0 },
+        "batch_size": { "type": "integer", "minimum": 1 },
+        "cycle_time_default": { "$ref": "#/definitions/CycleTimeDefault" },
+        "integration": { "$ref": "#/definitions/Integration" },
+        "reliability": { "$ref": "#/definitions/Reliability" },
+        "financial": { "$ref": "#/definitions/Financial" }
+      }
+    },
+    "CycleTimeDefault": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean_sec"],
+      "properties": {
+        "mean_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "stddev_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "Integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["internal_transfer_eliminated"],
+      "properties": {
+        "internal_transfer_eliminated": { "type": "boolean" },
+        "stage_weights": {
+          "type": "object",
+          "description": "Optional in public schema. If absent, Adapter computes proportional weights. If present, Adapter validates sum = 1.0.",
+          "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+          "minProperties": 2
+        }
+      }
+    },
+    "Reliability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mtbf_hours", "mttr_minutes", "useful_life_years"],
+      "properties": {
+        "mtbf_hours": { "type": "number", "exclusiveMinimum": 0 },
+        "mttr_minutes": { "type": "number", "exclusiveMinimum": 0 },
+        "useful_life_years": { "type": "number", "exclusiveMinimum": 0 },
+        "degradation_model": { "type": ["string", "null"], "enum": ["linear", null] }
+      }
+    },
+    "Financial": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["capex_usd", "opex_usd_per_year", "useful_life_years"],
+      "properties": {
+        "capex_usd": { "type": "number", "minimum": 0 },
+        "opex_usd_per_year": { "type": "number", "minimum": 0 },
+        "useful_life_years": { "type": "number", "exclusiveMinimum": 0 }
+      }
+    },
+    "WorkUnit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["work_unit_id", "work_unit_model_id", "cycle_time", "age_years", "work_unit_parameters"],
+      "properties": {
+        "work_unit_id": { "type": "string", "pattern": "^[a-z0-9_]+$", "description": "Globally unique across all work units." },
+        "work_unit_model_id": { "type": "string", "minLength": 1 },
+        "cycle_time": { "$ref": "#/definitions/CycleTimeInstance" },
+        "age_years": { "type": "number", "minimum": 0 },
+        "work_unit_parameters": { "$ref": "#/definitions/WorkUnitParameters" }
+      }
+    },
+    "CycleTimeInstance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mean_sec"],
+      "properties": {
+        "mean_sec": { "type": "number", "exclusiveMinimum": 0 },
+        "stddev_sec": { "type": "number", "minimum": 0 }
+      }
+    },
+    "WorkUnitParameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defect_rate", "operating_rate"],
+      "description": "Per-machine observed parameters from MES history. Required on every WorkUnit.",
+      "properties": {
+        "defect_rate": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Per-machine observed defect rate. Overrides stage_parameters.defect_rate in simulation. OEE Quality component."
+        },
+        "operating_rate": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "OEE Performance component. Fraction of time at intended speed."
+        }
+      }
+    },
+    "Calendar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["meta_data", "time_horizon", "demand"],
+      "properties": {
+        "meta_data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timezone", "aggregation_interval_minutes"],
+          "properties": {
+            "timezone": { "type": "string", "minLength": 1 },
+            "aggregation_interval_minutes": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "time_horizon": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["start_time", "end_time"],
+          "properties": {
+            "start_time": { "type": "string", "format": "date-time" },
+            "end_time": { "type": "string", "format": "date-time" }
+          }
+        },
+        "overtime": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["date", "type"],
+            "properties": {
+              "date": { "type": "string", "format": "date" },
+              "type": { "type": "string", "enum": ["weekend", "holiday"] }
+            }
+          }
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["date", "type"],
+            "properties": {
+              "date": { "type": "string", "format": "date" },
+              "type": { "type": "string", "enum": ["weekend", "holiday", "special"] },
+              "note": { "type": "string" }
+            }
+          }
+        },
+        "demand": { "$ref": "#/definitions/Demand" }
+      }
+    },
+    "Demand": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target_output_qty", "planning_unit", "periods"],
+      "description": "All demand lives here. No top-level planning_period field in canonical.",
+      "properties": {
+        "target_output_qty": { "type": "integer", "minimum": 1 },
+        "planning_unit": { "type": "string", "enum": ["shift", "day"] },
+        "periods": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/DemandPeriod" }
+        }
+      }
+    },
+    "DemandPeriod": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["period_id", "date", "shift_id", "target_qty"],
+      "properties": {
+        "period_id": { "type": "string", "minLength": 1 },
+        "date": { "type": "string", "format": "date" },
+        "shift_id": { "type": "string", "minLength": 1 },
+        "target_qty": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

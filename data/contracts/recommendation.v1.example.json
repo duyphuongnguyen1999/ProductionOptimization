@@ -1,0 +1,42 @@
+{
+  "_comment": "Example recommendation.json for a 2-stage baseline run. Written by Python Analytics CLI to artifacts/{run_id}/recommendation.json. Recommendations are ranked by priority.",
+  "schema_version": "1.0",
+  "run_id": "a3f2b1c4-7e8d-4f9a-b012-3456789abcde",
+  "analytics_version": "1.0.0",
+  "generated_at": "2026-01-05T08:46:31Z",
+  "recommendations": [
+    {
+      "rank": 1,
+      "type": "increase_downstream_capacity",
+      "target_stage_ids": ["welding"],
+      "rationale": "Welding stage is the bottleneck at 94% utilization, causing 1240 seconds of blocking at the upstream Pressing stage (FM-01). Adding one additional welding machine would reduce blocking and increase system throughput. With a second unit, welding utilization drops to approximately 47%, eliminating the bottleneck and reducing WIP accumulation at the pressing boundary.",
+      "linked_failure_modes": ["FM-01"],
+      "estimated_impact": {
+        "throughput_delta": 85.0,
+        "throughput_delta_percent": 18.0,
+        "lead_time_delta": -0.15,
+        "footprint_delta": 4.5,
+        "capex_usd": 45000,
+        "opex_delta_usd_per_year": 4000,
+        "roi_percent": 210.0,
+        "payback_years": 1.8
+      },
+      "confidence": "rule_based"
+    },
+    {
+      "rank": 2,
+      "type": "preventive_maintenance",
+      "target_stage_ids": ["pressing", "welding"],
+      "rationale": "Both press_machine_01 and weld_machine_01 are showing OEE below 0.87. Preventive maintenance to improve operating_rate from current 0.91–0.92 toward 0.95 would increase effective throughput without capital investment. Estimated OEE improvement of 3–4% system-wide.",
+      "linked_failure_modes": [],
+      "estimated_impact": {
+        "throughput_delta": 14.0,
+        "throughput_delta_percent": 3.0,
+        "capex_usd": 0,
+        "opex_delta_usd_per_year": 2000,
+        "reliability_improvement": 0.03
+      },
+      "confidence": "rule_based"
+    }
+  ]
+}

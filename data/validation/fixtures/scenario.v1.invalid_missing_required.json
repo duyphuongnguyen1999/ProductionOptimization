@@ -1,0 +1,16 @@
+{
+  "_comment": "NEGATIVE fixture — missing required top-level fields: schema_version and factory. Must be rejected by scenario.v1.schema.json.",
+  "scenario_name": "Invalid — Missing Required Fields",
+  "shifts": [],
+  "days": [],
+  "materials": [],
+  "products": [],
+  "processes": [],
+  "work_unit_models": [],
+  "work_units": [],
+  "calendar": {
+    "meta_data": { "timezone": "UTC", "aggregation_interval_minutes": 5 },
+    "time_horizon": { "start_time": "2026-01-01T00:00:00Z", "end_time": "2026-01-02T00:00:00Z" },
+    "demand": { "target_output_qty": 1, "planning_unit": "shift", "periods": [] }
+  }
+}

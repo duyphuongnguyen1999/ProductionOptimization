@@ -1,0 +1,259 @@
+{
+  "_comment": "Minimal valid public scenario example for PIDSS v1.0. Demonstrates a 2-stage sheath assembly process with 1 press_machine and 1 weld_machine. Use data/contracts/canonical_scenario.example.json for the full 7-stage reference scenario.",
+  "schema_version": "1.0",
+  "scenario_name": "Baseline — 2-Stage Minimal Example",
+  "scenario_description": "Minimal public scenario example for schema validation and integration testing. 2 stages, 2 work unit models, 2 work unit instances.",
+  "random_seed": 42,
+  "factory": {
+    "footprint_limit_m2": 2400.0,
+    "layout_factor": 1.3
+  },
+  "shifts": [
+    {
+      "shift_id": "A",
+      "name": "Shift 1 (Day)",
+      "start_minute_of_day": 360,
+      "duration_minutes": 480,
+      "net_labor_minutes": 415,
+      "performance_factor": 1.0,
+      "breaks": [
+        {
+          "start_minute_from_shift_start": 120,
+          "duration_minutes": 15,
+          "type": "rest",
+          "coverage_mode": "staggered",
+          "min_coverage_ratio": 0.3
+        },
+        {
+          "start_minute_from_shift_start": 240,
+          "duration_minutes": 45,
+          "type": "meal",
+          "coverage_mode": "staggered",
+          "min_coverage_ratio": 0.1
+        }
+      ]
+    }
+  ],
+  "days": [
+    {
+      "day_id": "weekday",
+      "name": "Weekday",
+      "shift_ids": ["A"],
+      "day_performance_factor": 1.0,
+      "labor_cost_factor": 1.0,
+      "min_coverage_ratio": 0.7,
+      "max_coverage_ratio": 1.0
+    },
+    {
+      "day_id": "weekend",
+      "name": "Weekend",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 2.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    },
+    {
+      "day_id": "holiday",
+      "name": "Holiday",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 4.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    },
+    {
+      "day_id": "special",
+      "name": "Special Day",
+      "shift_ids": [],
+      "day_performance_factor": 0.0,
+      "labor_cost_factor": 2.0,
+      "min_coverage_ratio": 0.0,
+      "max_coverage_ratio": 0.0
+    }
+  ],
+  "materials": [
+    { "material_id": "sheath_tube", "name": "Sheath Tube" },
+    { "material_id": "housing",     "name": "Housing" },
+    { "material_id": "valve",       "name": "Valve" },
+    { "material_id": "sheath_cap",  "name": "Sheath Cap" }
+  ],
+  "products": [
+    {
+      "product_id": "ip_1_1",
+      "name": "Post-Pressing Sub-Assembly",
+      "type": "intermediate_product",
+      "bill_of_materials": [
+        { "type": "material", "id": "sheath_tube", "quantity_required_per_output": 1 },
+        { "type": "material", "id": "housing",     "quantity_required_per_output": 1 }
+      ]
+    },
+    {
+      "product_id": "semi_product_1",
+      "name": "Sheath Assembly (2-Stage)",
+      "type": "semi_product",
+      "bill_of_materials": [
+        { "type": "intermediate_product", "id": "ip_1_1",    "quantity_required_per_output": 1 },
+        { "type": "material",             "id": "valve",     "quantity_required_per_output": 1 },
+        { "type": "material",             "id": "sheath_cap","quantity_required_per_output": 1 }
+      ]
+    },
+    {
+      "product_id": "finished_product_1",
+      "name": "Finished Product A (Minimal)",
+      "type": "finished_product",
+      "bill_of_materials": [
+        { "type": "semi_product", "id": "semi_product_1", "quantity_required_per_output": 1 }
+      ]
+    }
+  ],
+  "processes": [
+    {
+      "process_id": "sheath_assembly",
+      "name": "Sheath Assembly Process",
+      "output_product_id": "semi_product_1",
+      "stages": [
+        {
+          "stage_id": "pressing",
+          "order": 1,
+          "name": "Pressing",
+          "eligible_work_unit_model_ids": ["press_machine"],
+          "input": [
+            { "type": "material", "id": "sheath_tube" },
+            { "type": "material", "id": "housing" }
+          ],
+          "output": [
+            { "type": "intermediate_product", "id": "ip_1_1" }
+          ],
+          "stage_parameters": {
+            "defect_rate": 0.005,
+            "rework": {
+              "available": true,
+              "rework_rate": 0.8,
+              "maximum_rework_cycles": 2
+            }
+          },
+          "wip_model": {
+            "buffer_id": "buf_pressing_to_welding",
+            "capacity_units": 1200,
+            "initial_wip_units": 0,
+            "buffer_policy": { "type": "fifo" }
+          }
+        },
+        {
+          "stage_id": "welding",
+          "order": 2,
+          "name": "Welding",
+          "eligible_work_unit_model_ids": ["weld_machine"],
+          "input": [
+            { "type": "intermediate_product", "id": "ip_1_1" },
+            { "type": "material", "id": "valve" },
+            { "type": "material", "id": "sheath_cap" }
+          ],
+          "output": [
+            { "type": "semi_product", "id": "semi_product_1" }
+          ],
+          "stage_parameters": {
+            "defect_rate": 0.008,
+            "rework": {
+              "available": true,
+              "rework_rate": 0.7,
+              "maximum_rework_cycles": 1
+            }
+          },
+          "wip_model": null
+        }
+      ]
+    }
+  ],
+  "work_unit_models": [
+    {
+      "model_id": "press_machine",
+      "name": "Press Machine",
+      "type": "semi_auto",
+      "covered_stage_ids": ["pressing"],
+      "operators_per_unit": 1,
+      "requires_operator_presence": true,
+      "footprint_m2": 4.5,
+      "unit_buffer_area_m2": 0.02,
+      "transfer_delay_sec": 240,
+      "batch_size": 600,
+      "cycle_time_default": { "mean_sec": 6.5, "stddev_sec": 0.3 },
+      "reliability": {
+        "mtbf_hours": 480,
+        "mttr_minutes": 30,
+        "useful_life_years": 10,
+        "degradation_model": "linear"
+      },
+      "financial": {
+        "capex_usd": 45000,
+        "opex_usd_per_year": 4000,
+        "useful_life_years": 10
+      }
+    },
+    {
+      "model_id": "weld_machine",
+      "name": "Weld Machine",
+      "type": "semi_auto",
+      "covered_stage_ids": ["welding"],
+      "operators_per_unit": 1,
+      "requires_operator_presence": true,
+      "footprint_m2": 4.5,
+      "unit_buffer_area_m2": 0.02,
+      "transfer_delay_sec": 240,
+      "batch_size": 600,
+      "cycle_time_default": { "mean_sec": 7.5, "stddev_sec": 0.4 },
+      "reliability": {
+        "mtbf_hours": 480,
+        "mttr_minutes": 30,
+        "useful_life_years": 10,
+        "degradation_model": "linear"
+      },
+      "financial": {
+        "capex_usd": 45000,
+        "opex_usd_per_year": 4000,
+        "useful_life_years": 10
+      }
+    }
+  ],
+  "work_units": [
+    {
+      "work_unit_id": "press_machine_01",
+      "work_unit_model_id": "press_machine",
+      "cycle_time": { "mean_sec": 6.5, "stddev_sec": 0.3 },
+      "age_years": 2,
+      "work_unit_parameters": { "defect_rate": 0.004, "operating_rate": 0.92 }
+    },
+    {
+      "work_unit_id": "weld_machine_01",
+      "work_unit_model_id": "weld_machine",
+      "cycle_time": { "mean_sec": 7.5, "stddev_sec": 0.4 },
+      "age_years": 2,
+      "work_unit_parameters": { "defect_rate": 0.007, "operating_rate": 0.91 }
+    }
+  ],
+  "calendar": {
+    "meta_data": {
+      "timezone": "Asia/Ho_Chi_Minh",
+      "aggregation_interval_minutes": 5
+    },
+    "time_horizon": {
+      "start_time": "2026-01-05T06:00:00Z",
+      "end_time": "2026-01-06T06:00:00Z"
+    },
+    "overtime": [],
+    "exceptions": [],
+    "demand": {
+      "target_output_qty": 17000,
+      "planning_unit": "shift",
+      "periods": [
+        {
+          "period_id": "SHIFT_A_2026-01-05",
+          "date": "2026-01-05",
+          "shift_id": "A",
+          "target_qty": 17000
+        }
+      ]
+    }
+  }
+}

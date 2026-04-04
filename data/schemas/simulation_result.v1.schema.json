@@ -1,0 +1,135 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://pidss/schemas/simulation_result.v1.schema.json",
+  "title": "PIDSS Simulation Result Schema",
+  "description": "Output schema for the C++ Simulator CLI (Pidss.Simulation). Written to artifacts/{run_id}/simulation_result.json. Consumed by Python Analytics CLI as input.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "run_id",
+    "simulator_version",
+    "generated_at",
+    "throughput",
+    "lead_time_estimate",
+    "total_wip",
+    "wip_per_stage",
+    "stage_utilization",
+    "blocking_time",
+    "starvation_time",
+    "defect_units_per_stage",
+    "rework_units_per_stage",
+    "scrap_units_per_stage",
+    "effective_availability",
+    "effective_oee",
+    "machine_area_m2",
+    "wip_area_m2",
+    "production_footprint_m2"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "enum": ["1.0"],
+      "description": "Output schema version."
+    },
+    "run_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "UUID v4 of the run that produced this artifact."
+    },
+    "simulator_version": {
+      "type": "string",
+      "minLength": 1,
+      "description": "PIDSS-Simulator version string (e.g., 1.0.0). Recorded in artifact_manifest.json."
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "UTC ISO 8601 timestamp when this file was written."
+    },
+    "throughput": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Quality-adjusted good units completed per hour (after defect/scrap deduction). System-level output rate."
+    },
+    "lead_time_estimate": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Estimated flow time in hours via Little's Law: total_wip / throughput."
+    },
+    "total_wip": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Aggregate WIP units across all stage boundaries."
+    },
+    "wip_per_stage": {
+      "type": "object",
+      "description": "Average WIP units at each stage boundary. Keys are stage_ids. For integrated WorkUnits, values are attributed via pre-materialized stage_weights.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "stage_utilization": {
+      "type": "object",
+      "description": "Fraction of available time actively processing per stage (0.0–1.0). Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "blocking_time": {
+      "type": "object",
+      "description": "Cumulative time (seconds) a stage was blocked — unable to transfer output downstream. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "starvation_time": {
+      "type": "object",
+      "description": "Cumulative time (seconds) a stage was starved — no input available from upstream. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "defect_units_per_stage": {
+      "type": "object",
+      "description": "Total defective units generated per stage over the simulation period. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "rework_units_per_stage": {
+      "type": "object",
+      "description": "Total units sent to rework per stage. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "scrap_units_per_stage": {
+      "type": "object",
+      "description": "Total units scrapped (defects that could not be reworked) per stage. Keys are stage_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0 },
+      "minProperties": 1
+    },
+    "effective_availability": {
+      "type": "object",
+      "description": "Effective availability per work unit, computed from MTBF/MTTR: mtbf / (mtbf + mttr/60). Keys are work_unit_ids. Units without reliability data have availability = 1.0.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "effective_oee": {
+      "type": "object",
+      "description": "Effective OEE per work unit: availability × operating_rate × (1 - defect_rate). Keys are work_unit_ids.",
+      "additionalProperties": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+      "minProperties": 1
+    },
+    "machine_area_m2": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total floor area of all WorkUnit instances: Σ(count × model.footprint_m2)."
+    },
+    "wip_area_m2": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total floor area of WIP buffers: Σ(wip_per_stage × model.unit_buffer_area_m2)."
+    },
+    "production_footprint_m2": {
+      "type": "number",
+      "minimum": 0,
+      "description": "Total production footprint: (machine_area_m2 + wip_area_m2) × layout_factor."
+    }
+  }
+}

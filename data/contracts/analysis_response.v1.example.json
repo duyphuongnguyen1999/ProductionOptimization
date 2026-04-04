@@ -1,0 +1,79 @@
+{
+  "_comment": "Example analysis_response.json for a 2-stage baseline run. Written by Python Analytics CLI to artifacts/{run_id}/analysis_response.json. Demonstrates FM-01 (Downstream Blocking) detected at pressing stage.",
+  "schema_version": "1.0",
+  "run_id": "a3f2b1c4-7e8d-4f9a-b012-3456789abcde",
+  "analytics_version": "1.0.0",
+  "generated_at": "2026-01-05T08:46:30Z",
+  "throughput": 472.3,
+  "lead_time_estimate": 0.38,
+  "total_wip": 179.5,
+  "wip_per_stage": {
+    "pressing": 179.5
+  },
+  "bottleneck_stage": "welding",
+  "capacity_utilization": 0.87,
+  "operator_utilization": {
+    "pressing": 0.81,
+    "welding": 0.94
+  },
+  "defect_rate_per_stage": {
+    "pressing": 0.004,
+    "welding": 0.007
+  },
+  "rework_rate_per_stage": {
+    "pressing": 0.80,
+    "welding": 0.70
+  },
+  "scrap_rate_per_stage": {
+    "pressing": 0.20,
+    "welding": 0.30
+  },
+  "oee_per_unit": {
+    "press_machine_01": {
+      "availability": 0.941,
+      "performance": 0.92,
+      "quality": 0.996,
+      "oee": 0.862
+    },
+    "weld_machine_01": {
+      "availability": 0.941,
+      "performance": 0.91,
+      "quality": 0.993,
+      "oee": 0.849
+    }
+  },
+  "machine_area_m2": 9.0,
+  "wip_area_m2": 3.59,
+  "production_footprint_m2": 16.4,
+  "throughput_per_m2": 28.8,
+  "wip_ratio": 1.0,
+  "footprint_constraint_status": "within_limit",
+  "wip_stability": "accumulating",
+  "wip_growth_rate": 12.4,
+  "failure_modes": [
+    {
+      "code": "FM-01",
+      "name": "Downstream Blocking",
+      "severity": "medium",
+      "detected": true,
+      "affected_stage_ids": ["pressing"],
+      "description": "Pressing stage is blocked 1240 seconds cumulative due to welding stage being near capacity (94% utilization). WIP at pressing-to-welding buffer is accumulating.",
+      "primary_evidence": {
+        "pressing_blocking_time_sec": 1240.0,
+        "welding_utilization": 0.94,
+        "wip_at_pressing_boundary": 179.5,
+        "buffer_capacity_units": 1200,
+        "buffer_fill_ratio": 0.15
+      }
+    },
+    {
+      "code": "FM-04",
+      "name": "Bottleneck Migration",
+      "severity": "low",
+      "detected": false,
+      "affected_stage_ids": [],
+      "description": "No bottleneck migration detected in single-run analysis. Comparison run required.",
+      "primary_evidence": {}
+    }
+  ]
+}
