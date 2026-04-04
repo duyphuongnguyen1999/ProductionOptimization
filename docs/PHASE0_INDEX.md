@@ -1,93 +1,100 @@
 # PIDSS Phase 0 — Deliverables Index
 
-**Phase:** 0 — Repository Foundation & Data-Layer Conventions
-**Version:** 1.0.0
-**Status:** Complete
+**Phase:** 0 — Repository Foundation & Data-Layer Conventions  
+**Version:** 1.1.0  
+**Status:** Complete — Updated Phase 1
 
 ---
 
 ## Purpose
 
-Phase 0 establishes all structural, naming, policy, and governance foundations for the PIDSS system. No business logic is implemented. All deliverables are documentation, conventions, and structural definitions that all subsequent phases build upon.
+Phase 0 establishes all structural, naming, policy, and governance foundations for the PIDSS system. Phase 1 extended the domain model; this index reflects the combined finalized decisions.
 
 ---
 
 ## Deliverables
 
-### Documentation [(`docs/`)](docs/)
+### Documentation [`docs/`](docs/)
 
 | File | Version | Status | Purpose |
 |---|---|---|---|
-| [`docs/REPOSITORY_CONVENTIONS.md`](docs/REPOSITORY_CONVENTIONS.md) | 1.0.0 | Complete | Repository structure, naming conventions, folder ownership, branch/commit rules |
+| [`docs/REPOSITORY_CONVENTIONS.md`](docs/REPOSITORY_CONVENTIONS.md) | 1.0.0 | Complete | Repository structure, naming conventions, folder ownership |
 | [`docs/STATUS_MODEL.md`](docs/STATUS_MODEL.md) | 1.0.0 | Complete | Run and Job lifecycle states, transitions, timestamp conventions |
-| [`docs/VERSIONING_POLICY.md`](docs/VERSIONING_POLICY.md) | 1.0.0 | Complete | Public schema versioning rules, adapter strategy, compatibility and deprecation policy |
-| [`docs/ARTIFACT_CONVENTION.md`](docs/ARTIFACT_CONVENTION.md) | 1.0.0 | Complete | Artifact directory layout, file definitions, append-only policy, scenario comparison policy, manifest format with engine versions |
-| [`docs/EXECUTION_MODEL.md`](docs/EXECUTION_MODEL.md) | 1.0.0 | Complete | Equipment-centric execution model, Stage vs WorkUnit separation, integrated cell modeling rules |
-| [`docs/NAMING_CONVENTIONS.md`](docs/NAMING_CONVENTIONS.md) | 1.0.0 | Complete | Naming conventions for all layers: JSON fields, enums, files, identifiers, C#, C++, Python, SQL |
-| [`docs/PHASE0_INDEX.md`](docs/PHASE0_INDEX.md) | 1.0.0 | Complete | This file — index of all Phase 0 deliverables and finalized decisions |
+| [`docs/VERSIONING_POLICY.md`](docs/VERSIONING_POLICY.md) | 1.0.0 | Complete | Public schema versioning rules, adapter strategy |
+| [`docs/ARTIFACT_CONVENTION.md`](docs/ARTIFACT_CONVENTION.md) | 1.1.0 | Complete | Artifact directory layout, file definitions, append-only policy |
+| [`docs/EXECUTION_MODEL.md`](docs/EXECUTION_MODEL.md) | 1.1.0 | Complete | Three-layer execution model: Stage / WorkUnitModel / WorkUnit |
+| [`docs/NAMING_CONVENTIONS.md`](docs/NAMING_CONVENTIONS.md) | 1.0.0 | Complete | Naming conventions for all layers |
+| [`docs/DOMAIN_MODEL.md`](docs/DOMAIN_MODEL.md) | 1.2.0 | Complete | Full domain model: products, BOM, stages, OEE, defect/rework |
+| [`docs/PHASE0_INDEX.md`](docs/PHASE0_INDEX.md) | 1.1.0 | Complete | This file |
 
-### Architecture Decision Records [(`docs/adr/`)](docs/adr/)
+### Architecture Decision Records [`docs/adr/`](docs/adr/)
 
 | File | Version | Status | Decision |
 |---|---|---|---|
 | [`docs/adr/ADR-0001-run-based-append-only-model.md`](docs/adr/ADR-0001-run-based-append-only-model.md) | 1.0.0 | Complete | Run-based execution; all artifacts immutable and append-only |
-| [`docs/adr/ADR-0002-equipment-centric-execution-model.md`](docs/adr/ADR-0002-equipment-centric-execution-model.md) | 1.0.0 | Complete | Stage = SOP identity; WorkUnit = execution via `covered_stage_ids[]` only; integration structural; stage weights by adapter; reliability fields in WorkUnit |
-| [`docs/adr/ADR-0003-adapter-based-versioning.md`](docs/adr/ADR-0003-adapter-based-versioning.md) | 1.0.0 | Complete | All version handling and stage weight computation in Platform Adapter; engines consume canonical only |
+| [`docs/adr/ADR-0002-equipment-centric-execution-model.md`](docs/adr/ADR-0002-equipment-centric-execution-model.md) | 1.1.0 | Complete | Three-layer model: Stage / WorkUnitModel / WorkUnit; OEE decomposition |
+| [`docs/adr/ADR-0003-adapter-based-versioning.md`](docs/adr/ADR-0003-adapter-based-versioning.md) | 1.1.0 | Complete | Adapter owns all canonical preparation including BOM, stage_parameters, work_unit_parameters |
 
-### Data Governance [(`data/documentation/`)](data/documentation/)
+### Data Governance [`data/documentation/`](data/documentation/)
 
 | File | Version | Status | Purpose |
 |---|---|---|---|
-| [`data/documentation/DATA_DICTIONARY.md`](data/documentation/DATA_DICTIONARY.md) | 1.0.0 | Complete | All domain entities, flow model concepts, footprint model, KPIs, failure modes FM-01–FM-10, reliability fields, status enumerations |
-| [`data/documentation/VERSION_REGISTRY.md`](data/documentation/VERSION_REGISTRY.md) | 1.0.0 | Complete | Registry of all public schema versions and lifecycle status |
-| [`data/documentation/CANONICAL_MODEL.md`](data/documentation/CANONICAL_MODEL.md) | 1.0.0 | Complete | 15 design principles governing the canonical scenario model |
+| [`data/documentation/DATA_DICTIONARY.md`](data/documentation/DATA_DICTIONARY.md) | 1.1.0 | Complete | All domain entities, KPIs, failure modes, OEE fields |
+| [`data/documentation/VERSION_REGISTRY.md`](data/documentation/VERSION_REGISTRY.md) | 1.0.0 | Complete | Registry of all public schema versions |
+| [`data/documentation/CANONICAL_MODEL.md`](data/documentation/CANONICAL_MODEL.md) | 1.1.0 | Complete | 18 design principles governing the canonical scenario model |
 | [`data/documentation/DATA_LAYER.md`](data/documentation/DATA_LAYER.md) | 1.0.0 | Complete | Purpose and structure of the `data/` governance layer |
 
-### Lineage Policy [(`data/lineage/`)](data/lineage/)
+### Lineage Policy [`data/lineage/`](data/lineage/)
 
 | File | Version | Status | Purpose |
 |---|---|---|---|
-| [`data/lineage/LINEAGE_POLICY.md`](data/lineage/LINEAGE_POLICY.md) | 1.0.0 | Complete | Artifact lineage, dependency threads, run regeneration requirements, artifact-only A/B comparison policy |
+| [`data/lineage/LINEAGE_POLICY.md`](data/lineage/LINEAGE_POLICY.md) | 1.1.0 | Complete | Artifact lineage, BOM flow, OEE flow, quality flow |
+
+### Canonical Example [`data/contracts/`](data/contracts/)
+
+| File | Version | Status | Purpose |
+|---|---|---|---|
+| [`data/contracts/canonical_scenario.example.json`](data/contracts/canonical_scenario.example.json) | 1.0.0 | Complete | Full reference example of canonical scenario format |
 
 ---
 
-## Key Decisions Finalized in Phase 0
+## Key Decisions Finalized
 
 1. **Run = UUID + append-only artifact directory** — every execution is immutable and traceable.
-2. **Stage identity is permanent** — never deleted, renamed, or converted. SOP traceability preserved across all scenarios.
-3. **`covered_stage_ids[]` is the only WorkUnit-to-Stage linkage** — always an array, minimum one element. No `stage_id` singular field exists.
-4. **Integration = `covered_stage_ids.length > 1`** — structural condition, not a type. Orthogonal to automation level.
-5. **Stage weights computed by Adapter, always pre-materialized in canonical** — engines never compute attribution. Adapter computes weights unconditionally when `covered_stage_ids.length > 1`, validating explicit client-supplied weights if present.
-6. **Canonical model is stable and unversioned** — engines consume canonical only, never public schema.
-7. **Adapter owns all translation, computation, and normalization** — version handling, stage weights, BOM validation, flow policy defaults, factory constraint fields.
-8. **Multi-process structure at canonical top level** — `processes[]` array with own stages/work_units; top-level `bom[]`.
-9. **Domain execution data not in database** — process structure, BOM, WorkUnit definitions, stage weights, flow policy in JSON artifacts only.
-10. **BOM governs final product capacity** — Analytics evaluates `min(component_throughput / qty_required)` across all BOM entries.
-11. **Reliability fields in WorkUnit** — MTBF, MTTR, age, useful life support investment ROI and FM-06/FM-07 detection.
-12. **`factory_footprint_limit_m2` is a mandatory top-level canonical field** — used by both simulator (footprint computation) and analytics (FM-08 detection).
-13. **Flow policy fields required for WIP estimation** — `batch_size`, `transfer_delay_sec`, `unit_buffer_area_m2` must be present in canonical for WIP and footprint computation.
-14. **Simulator must output WIP, blocking, starvation, and footprint metrics** — these are contractually required by the canonical input fields; analytics reads them from artifacts.
-15. **10 system-level failure modes are first-class domain concepts** — FM-01 through FM-10 defined in Data Dictionary; Analytics v1 must detect all of them.
-16. **A/B comparison is artifact-only** — never re-invokes engines; reads from stored `analysis_response.json` and `simulation_result.json` of both runs.
-17. **All timestamps UTC ISO 8601, all times in seconds** — no mixed units.
-18. **Repository uses `platform/`, `engines/`, `data_platform/`, `presentation/`, `data_storage/`** — not the legacy `platform_dotnet/`, `simulator_cpp/`, `analytics/` paths.
-19. **Primary UI is React (web); WinForms is future desktop client** — `presentation/web/Pidss.Web.React/` is the active UI project.
-20. **Data Platform runs offline before the execution pipeline** — `data_platform/` never consumes `canonical_scenario.json`.
-21. **ScenarioBuilder is the only component that merges user input + feature store + calibration** — it outputs a public-schema-compliant snapshot, not a canonical model.
-22. **DataSources are read-only abstractions** — `IFeatureStoreReader`, `ICalibrationProfileProvider`; no logic, no transformation.
+2. **Stage identity is permanent** — never deleted, renamed, or converted. SOP traceability preserved.
+3. **Three-layer execution model** — Stage (SOP identity) / WorkUnitModel (class template) / WorkUnit (physical instance).
+4. **`covered_stage_ids[]` is the only WorkUnitModel-to-Stage linkage** — always an array, minimum one element. No `stage_id` singular field.
+5. **Integration = `covered_stage_ids.length > 1`** — structural condition, not a type. Orthogonal to automation level.
+6. **Stage weights computed by Adapter, always pre-materialized** — engines never compute attribution.
+7. **Canonical model is stable and unversioned** — engines consume canonical only, never public schema.
+8. **BOM is embedded within each product object** — all three product types (intermediate_product, semi_product, finished_product) carry `bill_of_materials[]` with `quantity_required_per_output`. There is no separate top-level `bom[]` array.
+9. **SemiProduct may reference other SemiProducts in BOM** — reflecting real cross-process dependencies.
+10. **Multi-process structure at canonical top level** — `processes[]` array; each process has its own stages and WorkUnitModel associations.
+11. **Domain execution data not in database** — process structure, product definitions, BOM, WorkUnitModel definitions, WorkUnit instances, stage weights, stage parameters, work_unit_parameters in JSON artifacts only.
+12. **OEE fully decomposed into three components** — Availability (reliability on model), Performance (operating_rate on instance), Quality (defect_rate on instance overriding stage baseline).
+13. **Defect rate at two levels** — `stage_parameters.defect_rate` is process-design baseline; `work_unit_parameters.defect_rate` is per-machine observed (from MES); work_unit value overrides stage baseline in simulation.
+14. **Rework modeled at stage level** — `stage_parameters.rework`: available, rework_rate, maximum_rework_cycles. Rework units re-enter the stage and consume additional cycle time.
+15. **WIP model per Stage** — each Stage (except the last in a process) carries a `wip_model` defining buffer capacity, initial WIP, and flow policy. Last stage has `wip_model: null`.
+16. **`eligible_work_unit_model_ids[]` required on every Stage** — defines which models may serve this stage; validated by Adapter.
+17. **`factory.footprint_limit_m2` is a top-level factory field** — both simulator and analytics consume it.
+18. **Flow policy fields required for WIP estimation** — `batch_size`, `transfer_delay_sec`, `unit_buffer_area_m2` on every WorkUnitModel.
+19. **Demand in `calendar.demand`** — no top-level `planning_period` field; all demand lives in `calendar.demand` with `planning_unit` and `periods[]`.
+20. **WorkUnitModel does not reuse across processes** — a model is bound to a specific set of stages within one process.
+21. **work_unit_parameters sourced from MES via Data Platform** — feature engineering extracts per-machine defect_rate and operating_rate from MES history; these flow into canonical via the public scenario submission.
+22. **10 system-level failure modes are first-class domain concepts** — FM-01 through FM-10; Analytics v1 must detect all of them.
+23. **A/B comparison is artifact-only** — never re-invokes engines; reads from stored artifacts of both runs.
+24. **Repository paths** — `platform/`, `engines/`, `data_platform/`, `presentation/`, `data_storage/`.
 
 ---
 
-## What Phase 0 Does NOT Include
+## What This Index Does NOT Cover (Future Phases)
 
 | Item | Phase |
 |---|---|
-| JSON Schema files (`scenario.v1.schema.json`, etc.) | Phase 2 |
-| Canonical scenario example JSON (`canonical_scenario.example.json`) | Phase 1 |
-| Domain concept diagram | Phase 1 |
+| JSON Schema files | Phase 2 |
 | Database migration scripts | Phase 3 |
 | Adapter implementation (C#) | Phase 4 |
 | ScenarioBuilder implementation (C#) | Phase 4 |
-| C++ simulation engine with WIP/footprint computation | Phase 5 |
+| C++ simulation engine | Phase 5 |
 | Python analytics with failure mode detection | Phase 6 |
 | React UI | Phase 7 |
