@@ -20,7 +20,7 @@ from pathlib import Path
 
 try:
     import jsonschema
-    from jsonschema import Draft7Validator, validate, ValidationError
+    from jsonschema import Draft7Validator
 except ImportError:
     print("ERROR: jsonschema library not installed. Run: pip install jsonschema")
     sys.exit(1)
@@ -96,26 +96,26 @@ def build_checks() -> list[tuple]:
     return [
         # ── Contract examples (must be valid) ──────────────────────────────
         (
-            "scenario.v1.example.json is valid",
-            CONTRACTS_DIR / "scenario.v1.example.json",
+            "scenario.example.json is valid",
+            CONTRACTS_DIR / "scenario.example.json",
             scenario_schema,
             True,
         ),
         (
-            "simulation_result.v1.example.json is valid",
-            CONTRACTS_DIR / "simulation_result.v1.example.json",
+            "simulation_result.example.json is valid",
+            CONTRACTS_DIR / "simulation_result.example.json",
             sim_result_schema,
             True,
         ),
         (
-            "analysis_response.v1.example.json is valid",
-            CONTRACTS_DIR / "analysis_response.v1.example.json",
+            "analysis_response.example.json is valid",
+            CONTRACTS_DIR / "analysis_response.example.json",
             analysis_schema,
             True,
         ),
         (
-            "recommendation.v1.example.json is valid",
-            CONTRACTS_DIR / "recommendation.v1.example.json",
+            "recommendation.example.json is valid",
+            CONTRACTS_DIR / "recommendation.example.json",
             recommendation_schema,
             True,
         ),
@@ -125,45 +125,45 @@ def build_checks() -> list[tuple]:
 
         # ── Positive fixtures (must be valid) ──────────────────────────────
         (
-            "fixture: scenario.v1.valid.json is valid",
-            FIXTURES_DIR / "scenario.v1.valid.json",
+            "fixture: scenario.valid.json is valid",
+            FIXTURES_DIR / "scenario.valid.json",
             scenario_schema,
             True,
         ),
         # ── Negative fixtures (must be rejected) ───────────────────────────
         (
-            "fixture: scenario.v1.invalid_missing_required.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_missing_required.json",
+            "fixture: scenario.invalid_missing_required.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_missing_required.json",
             scenario_schema,
             False,
         ),
         (
-            "fixture: scenario.v1.invalid_additional_properties.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_additional_properties.json",
+            "fixture: scenario.invalid_additional_properties.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_additional_properties.json",
             scenario_schema,
             False,
         ),
         (
-            "fixture: scenario.v1.invalid_bad_enum.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_bad_enum.json",
+            "fixture: scenario.invalid_bad_enum.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_bad_enum.json",
             scenario_schema,
             False,
         ),
         (
-            "fixture: scenario.v1.invalid_empty_covered_stage_ids.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_empty_covered_stage_ids.json",
+            "fixture: scenario.invalid_empty_covered_stage_ids.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_empty_covered_stage_ids.json",
             scenario_schema,
             False,
         ),
         (
-            "fixture: scenario.v1.invalid_missing_bom.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_missing_bom.json",
+            "fixture: scenario.invalid_missing_bom.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_missing_bom.json",
             scenario_schema,
             False,
         ),
         (
-            "fixture: scenario.v1.invalid_missing_work_unit_parameters.json is rejected",
-            FIXTURES_DIR / "scenario.v1.invalid_missing_work_unit_parameters.json",
+            "fixture: scenario.invalid_missing_work_unit_parameters.json is rejected",
+            FIXTURES_DIR / "scenario.invalid_missing_work_unit_parameters.json",
             scenario_schema,
             False,
         ),
