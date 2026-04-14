@@ -33,7 +33,8 @@ public enum JobStatus
     Queued,
     Running,
     Completed,
-    Failed
+    Failed,
+    Cancelled
 }
 
 /// <summary>
@@ -43,5 +44,6 @@ public enum JobStatus
 public enum JobType
 {
     Simulation = 1,
-    Analytics  = 2
+    Analytics = 2,
+    Optimization = 3
 }
