@@ -1,10 +1,13 @@
 using System.Text.Json.Nodes;
 
+using Pidss.Platform.Domain.Abstractions;
 using Pidss.Platform.Domain.ValueObjects;
 
 namespace Pidss.Platform.Domain.Entities;
 
 /// <summary>
+/// ScenarioTemplate Aggregate Root.
+///
 /// A named, reusable scenario configuration saved by users as
 /// the basis for run submissions.
 ///
@@ -16,9 +19,8 @@ namespace Pidss.Platform.Domain.Entities;
 ///   - SchemaVersion must be a valid MAJOR.MINOR string
 ///   - Tags are normalised: lowercase, deduplicated, sorted, comma-joined
 /// </summary>
-public sealed class ScenarioTemplate
+public sealed class ScenarioTemplate : AggregateRoot<Guid>
 {
-    public Guid Id { get; private init; }
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
     public SchemaVersion SchemaVersion { get; private set; } = null!;

@@ -1,6 +1,10 @@
+using Pidss.Platform.Domain.Abstractions;
+
 namespace Pidss.Platform.Domain.Entities;
 
 /// <summary>
+/// RunMetric Entity — belongs to the Run aggregate.
+///
 /// A single KPI value extracted from analytics output and stored
 /// in the database for fast querying and scenario comparison.
 ///
@@ -11,9 +15,8 @@ namespace Pidss.Platform.Domain.Entities;
 ///   - MetricKey is normalised to lowercase and trimmed
 ///   - MetricKey must not be empty
 /// </summary>
-public sealed class RunMetric
+public sealed class RunMetric : Entity<Guid>
 {
-    public Guid Id { get; private init; }
     public Guid RunId { get; private init; }
     public string MetricKey { get; private init; } = string.Empty;
     public double MetricValue { get; private init; }

@@ -1,17 +1,19 @@
+using Pidss.Platform.Domain.Abstractions;
 using Pidss.Platform.Domain.ValueObjects;
 
 namespace Pidss.Platform.Domain.Entities;
 
 /// <summary>
+/// RunArtifact Entity — belongs to the Run aggregate.
+///
 /// Metadata index record for one artifact file produced by a run.
 /// The actual file lives on disk at <see cref="Path"/>.FullPath.
 /// This entity is the queryable database reference.
 ///
 /// Append-only: once created, an artifact record is never updated or deleted (ADR-0001).
 /// </summary>
-public sealed class RunArtifact
+public sealed class RunArtifact : Entity<Guid>
 {
-    public Guid Id { get; private init; }
     public Guid RunId { get; private init; }
     public string ArtifactType { get; private init; } = string.Empty;
     public ArtifactPath Path { get; private init; } = null!;

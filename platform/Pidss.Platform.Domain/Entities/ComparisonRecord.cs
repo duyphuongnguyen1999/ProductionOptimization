@@ -1,8 +1,12 @@
 using System.Text.Json.Nodes;
 
+using Pidss.Platform.Domain.Abstractions;
+
 namespace Pidss.Platform.Domain.Entities;
 
 /// <summary>
+/// ComparisonRecord Aggregate Root.
+///
 /// Stores the result of an A/B comparison between two completed runs.
 /// Comparison is a first-class REST resource — created once, stored, and retrievable.
 ///
@@ -11,9 +15,8 @@ namespace Pidss.Platform.Domain.Entities;
 ///   - Result is immutable once set — comparison is never re-computed
 ///   - Comparison reads only from stored artifacts, never re-invokes engines
 /// </summary>
-public sealed class ComparisonRecord
+public sealed class ComparisonRecord : AggregateRoot<Guid>
 {
-    public Guid Id { get; private init; }
     public Guid BaselineRunId { get; private init; }
     public Guid CandidateRunId { get; private init; }
     public string ResultJson { get; private init; } = string.Empty;

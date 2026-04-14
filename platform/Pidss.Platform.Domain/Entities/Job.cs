@@ -1,8 +1,11 @@
+using Pidss.Platform.Domain.Abstractions;
 using Pidss.Platform.Domain.Enums;
 
 namespace Pidss.Platform.Domain.Entities;
 
 /// <summary>
+/// Job Entity — internal to the Run aggregate.
+///
 /// Represents one engine invocation within a run.
 /// Jobs are accessed only through <see cref="Run.Jobs"/> —
 /// they are never referenced directly from outside the aggregate.
@@ -12,9 +15,8 @@ namespace Pidss.Platform.Domain.Entities;
 ///   - Once in a terminal state (Completed, Failed), no further transitions are allowed
 ///   - EngineVersion is set when the engine process starts
 /// </summary>
-public sealed class Job
+public sealed class Job : Entity<Guid>
 {
-    public Guid Id { get; private init; }
     public Guid RunId { get; private init; }
     public JobType JobType { get; private init; }
     public JobStatus Status { get; private set; }
@@ -73,6 +75,18 @@ public sealed class Job
         Status = JobStatus.Failed;
         ExitCode = exitCode;
         ErrorMessage = errorMessage;
+        CompletedAt = DateTime.UtcNow;
+    }
+
+    internal void MarkCancelled()
+    {
+        if (IsTerminal)
+        {
+            throw new InvalidOperationException(
+                $"Job '{Id}' ({JobType}) is already in terminal state '{Status}'.");
+        }
+
+        Status = JobStatus.Cancelled;
         CompletedAt = DateTime.UtcNow;
     }
 

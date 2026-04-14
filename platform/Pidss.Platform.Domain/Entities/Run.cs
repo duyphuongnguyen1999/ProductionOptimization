@@ -1,9 +1,12 @@
+using Pidss.Platform.Domain.Abstractions;
+using Pidss.Platform.Domain.DomainEvents;
 using Pidss.Platform.Domain.Enums;
 using Pidss.Platform.Domain.ValueObjects;
 
 namespace Pidss.Platform.Domain.Entities;
-
 /// <summary>
+/// Run Aggregate Root.
+///
 /// Represents one immutable scenario evaluation run — the top-level execution unit.
 /// Owns Job entities, RunArtifact index records, and RunMetric summaries.
 ///
@@ -16,9 +19,8 @@ namespace Pidss.Platform.Domain.Entities;
 ///   - Domain execution data is NOT stored here — lives in JSON artifacts on disk
 ///   - Append-only: a Run is never deleted (ADR-0001)
 /// </summary>
-public sealed class Run
+public sealed class Run : AggregateRoot<Guid>
 {
-    public Guid Id { get; private init; }
     public RunStatus Status { get; private set; }
     public SchemaVersion? SchemaVersion { get; private init; }
     public string? CalibrationProfileId { get; private init; }
@@ -30,7 +32,6 @@ public sealed class Run
     public DateTime? CompletedAt { get; private set; }
 
     public string? ErrorMessage { get; private set; }
-    public string? ErrorDetail { get; private set; }
 
     // Internal entities — accessible only through this aggregate root.
     private readonly List<Job> _jobs = [];
@@ -85,17 +86,40 @@ public sealed class Run
         ?? throw new InvalidOperationException(
             $"Job of type '{jobType}' not found in run '{Id}'.");
 
-    public void MarkJobQueued(JobType jobType) =>
-        GetJob(jobType).MarkQueued();
+    public void MarkJobQueued(JobType jobType)
+    {
+        Job job = GetJob(jobType);
+        job.MarkQueued();
+        RaiseEvent(new JobQueuedEvent(job.Id, Id));
+    }
 
-    public void MarkJobRunning(JobType jobType, string engineVersion) =>
-        GetJob(jobType).MarkRunning(engineVersion);
+    public void MarkJobRunning(JobType jobType, string engineVersion)
+    {
+        Job job = GetJob(jobType);
+        job.MarkRunning(engineVersion);
+        RaiseEvent(new JobRunningEvent(job.Id, Id, engineVersion));
+    }
 
-    public void MarkJobCompleted(JobType jobType, int exitCode) =>
-        GetJob(jobType).MarkCompleted(exitCode);
+    public void MarkJobCompleted(JobType jobType, int exitCode)
+    {
+        Job job = GetJob(jobType);
+        job.MarkCompleted(exitCode);
+        RaiseEvent(new JobCompletedEvent(job.Id, Id, exitCode));
+    }
 
-    public void MarkJobFailed(JobType jobType, int? exitCode, string errorMessage) =>
-        GetJob(jobType).MarkFailed(exitCode, errorMessage);
+    public void MarkJobFailed(JobType jobType, int? exitCode, string errorMessage)
+    {
+        Job job = GetJob(jobType);
+        job.MarkFailed(exitCode, errorMessage);
+        RaiseEvent(new JobFailedEvent(job.Id, Id, errorMessage));
+    }
+
+    public void MarkJobCancelled(JobType jobType, string reason)
+    {
+        Job job = GetJob(jobType);
+        job.MarkCancelled();
+        RaiseEvent(new JobCancelledEvent(job.Id, Id, reason));
+    }
 
     // ── Artifact management (through aggregate root) ───────────────────────
 
@@ -134,16 +158,28 @@ public sealed class Run
         {
             case RunStatus.Queued:
                 QueuedAt = DateTime.UtcNow;
+                RaiseEvent(new RunQueuedEvent(Id));
+                break;
+            case RunStatus.Validating:
+                RaiseEvent(new RunValidatingEvent(Id));
                 break;
             case RunStatus.Running:
                 StartedAt = DateTime.UtcNow;
+                RaiseEvent(new RunRunningEvent(Id));
                 break;
             case RunStatus.Completed:
+                CompletedAt = DateTime.UtcNow;
+                RaiseEvent(new RunCompletedEvent(Id));
+                break;
             case RunStatus.Failed:
+                CompletedAt = DateTime.UtcNow;
+                ErrorMessage = errorMessage;
+                RaiseEvent(new RunFailedEvent(Id, errorMessage ?? "Run failed."));
+                break;
             case RunStatus.Cancelled:
                 CompletedAt = DateTime.UtcNow;
                 ErrorMessage = errorMessage;
-                ErrorDetail = errorDetail;
+                RaiseEvent(new RunCancelledEvent(Id, errorMessage ?? "Cancelled by user."));
                 break;
         }
     }
