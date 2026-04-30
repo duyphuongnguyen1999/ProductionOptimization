@@ -1,5 +1,6 @@
-namespace Pidss.Platform.Domain.ValueObjects;
+using Pidss.Platform.Domain.Abstractions;
 
+namespace Pidss.Platform.Domain.ValueObjects;
 /// <summary>
 /// Represents the validated filesystem path to a PIDSS run artifact.
 ///

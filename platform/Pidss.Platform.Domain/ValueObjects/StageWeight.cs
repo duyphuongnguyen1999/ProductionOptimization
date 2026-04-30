@@ -1,3 +1,5 @@
+using Pidss.Platform.Domain.Abstractions;
+
 namespace Pidss.Platform.Domain.ValueObjects;
 
 /// <summary>
